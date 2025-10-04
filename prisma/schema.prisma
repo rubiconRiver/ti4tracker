@@ -1,0 +1,71 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Game {
+  id          String   @id @default(cuid())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  status      String   @default("setup") // setup, active, paused, completed
+  currentTurn Int      @default(0)
+
+  players     Player[]
+  history     TurnHistory[]
+
+  @@index([status])
+}
+
+model Player {
+  id            String   @id @default(cuid())
+  gameId        String
+  game          Game     @relation(fields: [gameId], references: [id], onDelete: Cascade)
+
+  name          String
+  color         String   // TI4 unit color (red, blue, green, yellow, purple, black, etc.)
+  faction       String?  // TI4 faction name (optional)
+  turnOrder     Int      // 0-based turn order
+
+  score         Int      @default(0)
+  totalTimeMs   Int      @default(0) // Total time in milliseconds
+  isActive      Boolean  @default(true)
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([gameId])
+  @@index([turnOrder])
+}
+
+model TurnHistory {
+  id            String   @id @default(cuid())
+  gameId        String
+  game          Game     @relation(fields: [gameId], references: [id], onDelete: Cascade)
+
+  playerId      String   // Player who took this turn
+  playerName    String   // Snapshot of player name
+  playerColor   String   // Snapshot of player color
+
+  turnNumber    Int      // Which turn in the game (0-based)
+  turnStartedAt DateTime
+  turnEndedAt   DateTime?
+  turnDurationMs Int?    // Duration of this turn in milliseconds
+
+  action        String   // "pass" or "end_turn" or "rewind"
+
+  createdAt     DateTime @default(now())
+
+  @@index([gameId])
+  @@index([turnNumber])
+}

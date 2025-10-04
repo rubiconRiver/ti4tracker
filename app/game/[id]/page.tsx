@@ -1,0 +1,189 @@
+'use client';
+
+import { useEffect, useState, use } from 'react';
+import { useGameSocket } from '@/components/game/use-game-socket';
+import Link from 'next/link';
+
+interface Player {
+  id: string;
+  name: string;
+  color: string;
+  faction: string | null;
+  turnOrder: number;
+  score: number;
+  totalTimeMs: number;
+}
+
+interface Game {
+  id: string;
+  status: string;
+  currentTurn: number;
+  players: Player[];
+}
+
+const COLOR_MAP: Record<string, { bg: string; text: string; border: string }> = {
+  red: { bg: 'bg-red-600', text: 'text-white', border: 'border-red-600' },
+  blue: { bg: 'bg-blue-600', text: 'text-white', border: 'border-blue-600' },
+  green: { bg: 'bg-green-600', text: 'text-white', border: 'border-green-600' },
+  yellow: { bg: 'bg-yellow-500', text: 'text-black', border: 'border-yellow-500' },
+  purple: { bg: 'bg-purple-600', text: 'text-white', border: 'border-purple-600' },
+  black: { bg: 'bg-gray-900', text: 'text-white', border: 'border-gray-900' },
+  orange: { bg: 'bg-orange-600', text: 'text-white', border: 'border-orange-600' },
+  pink: { bg: 'bg-pink-600', text: 'text-white', border: 'border-pink-600' },
+};
+
+function formatTime(ms: number): string {
+  const totalSeconds = Math.floor(ms / 1000);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  if (hours > 0) {
+    return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  }
+  return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+}
+
+export default function GamePage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
+  const [game, setGame] = useState<Game | null>(null);
+  const [currentPlayerIndex, setCurrentPlayerIndex] = useState(0);
+  const [turnStartTime, setTurnStartTime] = useState(Date.now());
+  const [elapsedTime, setElapsedTime] = useState(0);
+  const { socket } = useGameSocket(id);
+
+  useEffect(() => {
+    // Fetch initial game state
+    fetch(`/api/games/${id}`)
+      .then((res) => res.json())
+      .then((data) => {
+        setGame(data);
+        setCurrentPlayerIndex(data.currentTurn % data.players.length);
+      });
+  }, [id]);
+
+  useEffect(() => {
+    if (!socket) return;
+
+    socket.on('turn-ended', (data: any) => {
+      setGame(data.game);
+      setCurrentPlayerIndex(data.game.currentTurn % data.game.players.length);
+      setTurnStartTime(Date.now());
+      setElapsedTime(0);
+    });
+
+    socket.on('player-updated', () => {
+      // Refetch game state
+      fetch(`/api/games/${id}`)
+        .then((res) => res.json())
+        .then((data) => setGame(data));
+    });
+
+    return () => {
+      socket.off('turn-ended');
+      socket.off('player-updated');
+    };
+  }, [socket, id]);
+
+  // Timer for current turn
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setElapsedTime(Date.now() - turnStartTime);
+    }, 100);
+
+    return () => clearInterval(interval);
+  }, [turnStartTime]);
+
+  if (!game) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-2xl text-gray-600">Loading...</div>
+      </div>
+    );
+  }
+
+  const currentPlayer = game.players[currentPlayerIndex];
+  const colorScheme = COLOR_MAP[currentPlayer?.color] || COLOR_MAP.red;
+
+  return (
+    <div className="min-h-screen bg-gray-900 text-white">
+      {/* Header with admin link */}
+      <div className="bg-gray-800 px-8 py-4 flex justify-between items-center">
+        <h1 className="text-2xl font-bold">TI4 Tracker</h1>
+        <div className="flex gap-4">
+          <Link
+            href={`/game/${id}/admin`}
+            className="px-4 py-2 bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            Admin Panel
+          </Link>
+          <Link
+            href={`/game/${id}/join`}
+            className="px-4 py-2 bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
+          >
+            Join Game
+          </Link>
+        </div>
+      </div>
+
+      {/* Current Player - Large Display */}
+      <div className="flex flex-col items-center justify-center py-16">
+        <div className="text-4xl font-semibold mb-4 text-gray-400">Current Turn</div>
+        <div
+          className={`${colorScheme.bg} ${colorScheme.text} px-24 py-16 rounded-3xl shadow-2xl border-8 ${colorScheme.border}`}
+        >
+          <div className="text-8xl font-bold text-center mb-4">{currentPlayer?.name}</div>
+          {currentPlayer?.faction && (
+            <div className="text-4xl text-center opacity-90">{currentPlayer.faction}</div>
+          )}
+        </div>
+
+        {/* Turn Timer */}
+        <div className="mt-12 text-6xl font-mono font-bold">
+          {formatTime(elapsedTime)}
+        </div>
+        <div className="text-2xl text-gray-400 mt-2">Turn Time</div>
+      </div>
+
+      {/* All Players Overview */}
+      <div className="px-8 pb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {game.players.map((player, index) => {
+            const colors = COLOR_MAP[player.color] || COLOR_MAP.red;
+            const isActive = index === currentPlayerIndex;
+
+            return (
+              <div
+                key={player.id}
+                className={`bg-gray-800 rounded-lg p-6 ${
+                  isActive ? `ring-4 ${colors.border}` : ''
+                } transition-all`}
+              >
+                <div className="flex items-center gap-4 mb-4">
+                  <div className={`w-16 h-16 rounded-full ${colors.bg}`}></div>
+                  <div>
+                    <div className="text-2xl font-bold">{player.name}</div>
+                    {player.faction && (
+                      <div className="text-sm text-gray-400">{player.faction}</div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Score</span>
+                    <span className="text-2xl font-bold">{player.score}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Total Time</span>
+                    <span className="font-mono">{formatTime(player.totalTimeMs)}</span>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
