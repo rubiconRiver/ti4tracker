@@ -147,7 +147,7 @@ export default function JoinGame({ params }: { params: Promise<{ id: string }> }
     );
   }
 
-  const selectedPlayer = game.players.find((p) => p.id === selectedPlayerId);
+  const selectedPlayer = game.players.find((p: Player) => p.id === selectedPlayerId);
   const isMyTurn = selectedPlayer?.turnOrder === currentPlayerIndex;
 
   return (
