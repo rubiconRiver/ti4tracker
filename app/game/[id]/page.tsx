@@ -135,7 +135,7 @@ export default function GamePage({ params }: { params: Promise<{ id: string }> }
       {/* All Players Overview */}
       <div className="px-8 pb-8">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {game.players.map((player, index) => {
+          {game.players.map((player: Player, index: number) => {
             const colors = COLOR_MAP[player.color] || COLOR_MAP.red;
             const isActive = index === currentPlayerIndex;
 
