@@ -30,7 +30,7 @@ export async function POST(
       where: { gameId: id },
     });
 
-    // Reset game state
+    // Reset game state to paused (waiting for strategy cards)
     const game = await db.game.update({
       where: { id },
       data: {
@@ -38,6 +38,7 @@ export async function POST(
         currentRound: 1,
         turnStartedAt: new Date(),
         speakerPlayerId: null,
+        status: 'paused',
       },
       include: {
         players: {
