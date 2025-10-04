@@ -15,34 +15,41 @@ datasource db {
 }
 
 model Game {
-  id          String   @id @default(cuid())
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  status      String   @default("setup") // setup, active, paused, completed
-  currentTurn Int      @default(0)
+  id            String   @id @default(cuid())
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  status        String   @default("setup") // setup, active, paused, completed
+  currentTurn   Int      @default(0)
+  currentRound  Int      @default(1)
+  speakerPlayerId String? // Player who has the speaker token
 
-  players     Player[]
-  history     TurnHistory[]
+  players       Player[]
+  history       TurnHistory[]
+  rounds        Round[]
 
   @@index([status])
 }
 
 model Player {
-  id            String   @id @default(cuid())
-  gameId        String
-  game          Game     @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  id              String   @id @default(cuid())
+  gameId          String
+  game            Game     @relation(fields: [gameId], references: [id], onDelete: Cascade)
 
-  name          String
-  color         String   // TI4 unit color (red, blue, green, yellow, purple, black, etc.)
-  faction       String?  // TI4 faction name (optional)
-  turnOrder     Int      // 0-based turn order
+  name            String
+  color           String   // TI4 unit color (red, blue, green, yellow, purple, black, etc.)
+  faction         String?  // TI4 faction name (optional)
+  turnOrder       Int      // 0-based turn order (changes each round based on strategy card)
+  strategyCard    Int?     // Current strategy card number (1-8)
 
-  score         Int      @default(0)
-  totalTimeMs   Int      @default(0) // Total time in milliseconds
-  isActive      Boolean  @default(true)
+  score           Int      @default(0)
+  totalTimeMs     Int      @default(0) // Total time in milliseconds
+  isActive        Boolean  @default(true)
+  hasSpeaker      Boolean  @default(false) // Does this player have the speaker token?
 
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  strategyPicks   StrategyCardPick[]
 
   @@index([gameId])
   @@index([turnOrder])
@@ -57,6 +64,7 @@ model TurnHistory {
   playerName    String   // Snapshot of player name
   playerColor   String   // Snapshot of player color
 
+  roundNumber   Int      @default(1) // Which round (1-based)
   turnNumber    Int      // Which turn in the game (0-based)
   turnStartedAt DateTime
   turnEndedAt   DateTime?
@@ -68,4 +76,36 @@ model TurnHistory {
 
   @@index([gameId])
   @@index([turnNumber])
+}
+
+model Round {
+  id          String   @id @default(cuid())
+  gameId      String
+  game        Game     @relation(fields: [gameId], references: [id], onDelete: Cascade)
+
+  roundNumber Int      // 1-based round number
+  startedAt   DateTime @default(now())
+  endedAt     DateTime?
+
+  strategyPicks StrategyCardPick[]
+
+  @@index([gameId])
+  @@index([roundNumber])
+}
+
+model StrategyCardPick {
+  id            String   @id @default(cuid())
+  roundId       String
+  round         Round    @relation(fields: [roundId], references: [id], onDelete: Cascade)
+
+  playerId      String
+  player        Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  cardNumber    Int      // 1-8 (Leadership, Diplomacy, Politics, Construction, Trade, Warfare, Technology, Imperial)
+  pickOrder     Int      // Order in which cards were picked (speaker picks first)
+
+  createdAt     DateTime @default(now())
+
+  @@index([roundId])
+  @@index([playerId])
 }

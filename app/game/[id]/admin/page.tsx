@@ -2,6 +2,7 @@
 
 import { useEffect, useState, use } from 'react';
 import { useGameSocket } from '@/components/game/use-game-socket';
+import StrategyCardAssignment from '@/components/game/strategy-card-assignment';
 import QRCode from 'qrcode';
 
 interface Player {
@@ -12,6 +13,8 @@ interface Player {
   turnOrder: number;
   score: number;
   totalTimeMs: number;
+  strategyCard: number | null;
+  hasSpeaker: boolean;
 }
 
 interface TurnHistory {
@@ -28,6 +31,7 @@ interface Game {
   id: string;
   status: string;
   currentTurn: number;
+  currentRound: number;
   players: Player[];
   history: TurnHistory[];
 }
@@ -106,6 +110,31 @@ export default function AdminPanel({ params }: { params: Promise<{ id: string }>
     }
   };
 
+  const nextRound = async () => {
+    if (!confirm(`Start round ${game!.currentRound + 1}?`)) return;
+
+    try {
+      await fetch('/api/rounds/next', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ gameId: id }),
+      });
+
+      const res = await fetch(`/api/games/${id}`);
+      const data = await res.json();
+      setGame(data);
+    } catch (error) {
+      console.error('Error advancing round:', error);
+      alert('Failed to advance round');
+    }
+  };
+
+  const refetchGame = async () => {
+    const res = await fetch(`/api/games/${id}`);
+    const data = await res.json();
+    setGame(data);
+  };
+
   if (!game) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -146,6 +175,9 @@ export default function AdminPanel({ params }: { params: Promise<{ id: string }>
             <h2 className="text-xl font-bold mb-4 text-black">Game Controls</h2>
             <div className="space-y-3">
               <div className="text-lg text-gray-700">
+                Round: <span className="font-bold text-black">{game.currentRound}</span>
+              </div>
+              <div className="text-lg text-gray-700">
                 Current Turn: <span className="font-bold text-black">{game.currentTurn}</span>
               </div>
               <button
@@ -154,6 +186,12 @@ export default function AdminPanel({ params }: { params: Promise<{ id: string }>
                 className="w-full px-4 py-3 bg-yellow-500 text-black rounded-lg font-medium hover:bg-yellow-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 ⏪ Rewind Turn
+              </button>
+              <button
+                onClick={nextRound}
+                className="w-full px-4 py-3 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 transition-colors"
+              >
+                Next Round →
               </button>
             </div>
           </div>
@@ -172,6 +210,16 @@ export default function AdminPanel({ params }: { params: Promise<{ id: string }>
               ))}
             </div>
           </div>
+        </div>
+
+        {/* Strategy Card Assignment */}
+        <div className="mt-8">
+          <StrategyCardAssignment
+            gameId={id}
+            players={game.players}
+            currentRound={game.currentRound}
+            onAssigned={refetchGame}
+          />
         </div>
 
         {/* Player Scores */}

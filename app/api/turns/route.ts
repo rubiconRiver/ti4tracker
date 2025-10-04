@@ -42,6 +42,7 @@ export async function POST(request: Request) {
         playerId,
         playerName: player.name,
         playerColor: player.color,
+        roundNumber: game.currentRound,
         turnNumber: game.currentTurn,
         turnStartedAt: new Date(turnStartedAt),
         turnEndedAt: now,

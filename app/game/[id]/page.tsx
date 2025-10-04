@@ -2,6 +2,7 @@
 
 import { useEffect, useState, use } from 'react';
 import { useGameSocket } from '@/components/game/use-game-socket';
+import { getStrategyCardName, getStrategyCardColor } from '@/lib/strategy-cards';
 import Link from 'next/link';
 
 interface Player {
@@ -12,12 +13,15 @@ interface Player {
   turnOrder: number;
   score: number;
   totalTimeMs: number;
+  strategyCard: number | null;
+  hasSpeaker: boolean;
 }
 
 interface Game {
   id: string;
   status: string;
   currentTurn: number;
+  currentRound: number;
   players: Player[];
 }
 
@@ -109,7 +113,10 @@ export default function GamePage({ params }: { params: Promise<{ id: string }> }
     <div className="min-h-screen bg-gray-900 text-white">
       {/* Header with admin link */}
       <div className="bg-gray-800 px-8 py-4 flex justify-between items-center">
-        <h1 className="text-2xl font-bold">TI4 Tracker</h1>
+        <div>
+          <h1 className="text-2xl font-bold">TI4 Tracker</h1>
+          <div className="text-sm text-gray-400">Round {game.currentRound}</div>
+        </div>
         <div className="flex gap-4">
           <Link
             href={`/game/${id}/admin`}
@@ -160,7 +167,9 @@ export default function GamePage({ params }: { params: Promise<{ id: string }> }
                 } transition-all`}
               >
                 <div className="flex items-center gap-4 mb-4">
-                  <div className={`w-16 h-16 rounded-full ${colors.bg}`}></div>
+                  <div className={`w-16 h-16 rounded-full ${colors.bg} flex items-center justify-center text-2xl font-bold`}>
+                    {player.hasSpeaker && '🔊'}
+                  </div>
                   <div>
                     <div className="text-2xl font-bold">{player.name}</div>
                     {player.faction && (
@@ -168,6 +177,12 @@ export default function GamePage({ params }: { params: Promise<{ id: string }> }
                     )}
                   </div>
                 </div>
+
+                {player.strategyCard && (
+                  <div className={`mb-3 px-3 py-2 rounded-lg ${getStrategyCardColor(player.strategyCard)} text-white text-center font-bold`}>
+                    {player.strategyCard}. {getStrategyCardName(player.strategyCard)}
+                  </div>
+                )}
 
                 <div className="space-y-2">
                   <div className="flex justify-between">
