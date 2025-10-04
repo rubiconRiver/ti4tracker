@@ -160,7 +160,7 @@ export default function AdminPanel({ params }: { params: Promise<{ id: string }>
           <div className="bg-white rounded-lg shadow-md p-6">
             <h2 className="text-xl font-bold mb-4 text-black">Recent Actions</h2>
             <div className="space-y-2 max-h-64 overflow-y-auto">
-              {game.history.slice(0, 10).map((turn) => (
+              {game.history.slice(0, 10).map((turn: TurnHistory) => (
                 <div key={turn.id} className="text-sm text-gray-700 border-b pb-2">
                   <span className="font-medium">{turn.playerName}</span> - {turn.action}
                   <div className="text-xs text-gray-500">
