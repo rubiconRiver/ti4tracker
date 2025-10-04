@@ -32,11 +32,12 @@ export async function POST(request: Request) {
       });
     }
 
-    // Increment round number
+    // Increment round number and pause for strategy card assignment
     const updatedGame = await db.game.update({
       where: { id: gameId },
       data: {
         currentRound: game.currentRound + 1,
+        status: 'paused',
       },
       include: {
         players: {
@@ -45,10 +46,13 @@ export async function POST(request: Request) {
       },
     });
 
-    // Clear strategy cards for next round
+    // Clear strategy cards and pass status for next round
     await db.player.updateMany({
       where: { gameId },
-      data: { strategyCard: null },
+      data: {
+        strategyCard: null,
+        hasPassed: false,
+      },
     });
 
     emitToGame(gameId, 'round-ended', { game: updatedGame });

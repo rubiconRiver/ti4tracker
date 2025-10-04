@@ -3,7 +3,9 @@
 import { useEffect, useState, use } from 'react';
 import { useGamePolling } from '@/components/game/use-game-polling';
 import { getStrategyCardName, getStrategyCardColor } from '@/lib/strategy-cards';
+import { getFactionIcon } from '@/lib/factions';
 import Link from 'next/link';
+import Image from 'next/image';
 
 interface Player {
   id: string;
@@ -133,9 +135,13 @@ export default function GamePage({ params }: { params: Promise<{ id: string }> }
             <div
               className={`${colorScheme.bg} ${colorScheme.text} px-24 py-16 rounded-3xl shadow-2xl border-8 ${colorScheme.border} relative`}
             >
-              {currentPlayer?.faction && (
-                <div className="absolute top-8 left-8 w-20 h-20 bg-white bg-opacity-20 rounded-full flex items-center justify-center text-3xl font-bold">
-                  {getFactionInitials(currentPlayer.faction)}
+              {currentPlayer?.faction && getFactionIcon(currentPlayer.faction) && (
+                <div className="absolute top-8 left-8 w-24 h-24 bg-white bg-opacity-30 rounded-full flex items-center justify-center p-2 overflow-hidden">
+                  <img
+                    src={getFactionIcon(currentPlayer.faction)!}
+                    alt={currentPlayer.faction}
+                    className="w-full h-full object-contain"
+                  />
                 </div>
               )}
               <div className="text-8xl font-bold text-center mb-4">{currentPlayer?.name}</div>
@@ -173,13 +179,21 @@ export default function GamePage({ params }: { params: Promise<{ id: string }> }
                   </div>
                 )}
                 <div className="flex items-center gap-4 mb-4">
-                  <div className={`w-16 h-16 rounded-full ${colors.bg} flex items-center justify-center font-bold relative`}>
+                  <div className={`w-16 h-16 rounded-full ${colors.bg} flex items-center justify-center font-bold relative overflow-hidden`}>
                     {player.hasSpeaker && (
-                      <div className="absolute -top-1 -right-1 text-2xl">🔊</div>
+                      <div className="absolute -top-1 -right-1 text-2xl z-10">🔊</div>
                     )}
-                    <div className="text-white text-lg">
-                      {getFactionInitials(player.faction) || player.name.substring(0, 2).toUpperCase()}
-                    </div>
+                    {getFactionIcon(player.faction) ? (
+                      <img
+                        src={getFactionIcon(player.faction)!}
+                        alt={player.faction || ''}
+                        className="w-12 h-12 object-contain"
+                      />
+                    ) : (
+                      <div className="text-white text-lg">
+                        {getFactionInitials(player.faction) || player.name.substring(0, 2).toUpperCase()}
+                      </div>
+                    )}
                   </div>
                   <div>
                     <div className="text-2xl font-bold">{player.name}</div>
