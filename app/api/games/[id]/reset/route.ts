@@ -36,6 +36,7 @@ export async function POST(
       data: {
         currentTurn: 0,
         currentRound: 1,
+        currentPlayerTurnOrder: 0,
         turnStartedAt: new Date(),
         speakerPlayerId: null,
         status: 'paused',

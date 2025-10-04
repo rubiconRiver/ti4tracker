@@ -52,7 +52,7 @@ export const FACTION_ICONS: Record<string, string> = {
   'The Naaz-Rokha Alliance': 'https://static.wikia.nocookie.net/twilight-imperium-4/images/5/5b/NAAZROKHA.png',
   'The Nomad': 'https://static.wikia.nocookie.net/twilight-imperium-4/images/0/0a/NOMAD.png',
   'The Titans of Ul': 'https://static.wikia.nocookie.net/twilight-imperium-4/images/9/9e/TITANS.png',
-  'The Vuil\'raith Cabal': 'https://static.wikia.nocookie.net/twilight-imperium-4/images/9/9c/MAHACT.png', // placeholder
+  'The Vuil\'raith Cabal': 'https://static.wikia.nocookie.net/twilight-imperium-4/images/9/9c/MAHACT.png', // No unique icon found on wiki
 };
 
 export function getFactionIcon(faction: string | null): string | null {

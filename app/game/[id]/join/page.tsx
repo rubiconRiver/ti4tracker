@@ -18,6 +18,8 @@ interface Game {
   id: string;
   status: string;
   currentTurn: number;
+  currentPlayerTurnOrder: number;
+  turnStartedAt: string;
   players: Player[];
 }
 
@@ -103,7 +105,9 @@ export default function JoinGame({ params }: { params: Promise<{ id: string }> }
   useEffect(() => {
     if (!game) return;
 
-    const playerIndex = game.currentTurn % game.players.length;
+    // Find player with current turn order
+    const currentPlayer = game.players.find((p: Player) => p.turnOrder === game.currentPlayerTurnOrder);
+    const playerIndex = currentPlayer ? game.players.indexOf(currentPlayer) : 0;
     setCurrentPlayerIndex(playerIndex);
   }, [game]);
 

@@ -60,9 +60,10 @@ export async function POST(request: Request) {
       },
     });
 
-    // Check if all players have passed
+    // Get fresh player data after updating hasPassed
     const updatedPlayers = await db.player.findMany({
       where: { gameId },
+      orderBy: { turnOrder: 'asc' },
     });
     const allPassed = updatedPlayers.every((p) => p.hasPassed);
 
@@ -82,15 +83,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ turnHistory, game: updatedGame });
     }
 
-    // Find next player who hasn't passed
+    // Find next player who hasn't passed (using fresh data)
     let nextTurnOrder = player.turnOrder + 1;
     let attempts = 0;
-    while (attempts < game.players.length) {
-      if (nextTurnOrder >= game.players.length) {
+    while (attempts < updatedPlayers.length) {
+      if (nextTurnOrder >= updatedPlayers.length) {
         nextTurnOrder = 0;
       }
 
-      const nextPlayer = game.players.find(p => p.turnOrder === nextTurnOrder);
+      const nextPlayer = updatedPlayers.find(p => p.turnOrder === nextTurnOrder);
       if (nextPlayer && !nextPlayer.hasPassed) {
         break;
       }
@@ -104,6 +105,7 @@ export async function POST(request: Request) {
       where: { id: gameId },
       data: {
         currentTurn: game.currentTurn + 1,
+        currentPlayerTurnOrder: nextTurnOrder,
         turnStartedAt: now,
       },
       include: {
@@ -117,7 +119,7 @@ export async function POST(request: Request) {
     emitToGame(gameId, 'turn-ended', {
       turnHistory,
       game: updatedGame,
-      nextPlayerId: game.players[nextTurnOrder].id,
+      nextPlayerId: updatedPlayers[nextTurnOrder].id,
     });
 
     return NextResponse.json({ turnHistory, game: updatedGame });

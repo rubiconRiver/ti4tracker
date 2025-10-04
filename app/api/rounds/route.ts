@@ -50,11 +50,12 @@ export async function POST(request: Request) {
       });
     }
 
-    // Reset currentTurn to 0 and unpause game when starting a new round with new turn order
+    // Reset currentTurn to 0, set first player, and unpause game when starting a new round with new turn order
     await db.game.update({
       where: { id: gameId },
       data: {
         currentTurn: 0,
+        currentPlayerTurnOrder: 0, // Start with turn order 0 (strategy card 1)
         turnStartedAt: new Date(),
         status: 'active', // Unpause game when round starts
       },

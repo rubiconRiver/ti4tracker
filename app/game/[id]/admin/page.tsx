@@ -67,10 +67,20 @@ export default function AdminPanel({ params }: { params: Promise<{ id: string }>
     if (!confirm('Rewind to the previous turn?')) return;
 
     try {
+      // Get the last turn from history to find previous player
+      const lastTurn = game.history[0];
+      if (!lastTurn) return;
+
+      const previousPlayer = game.players.find((p: Player) => p.id === lastTurn.playerId);
+      if (!previousPlayer) return;
+
       await fetch(`/api/games/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ currentTurn: game.currentTurn - 1 }),
+        body: JSON.stringify({
+          currentTurn: game.currentTurn - 1,
+          currentPlayerTurnOrder: previousPlayer.turnOrder,
+        }),
       });
       // Polling will update automatically
     } catch (error) {
@@ -102,7 +112,10 @@ export default function AdminPanel({ params }: { params: Promise<{ id: string }>
       await fetch(`/api/games/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ currentTurn: 0 }),
+        body: JSON.stringify({
+          currentTurn: 0,
+          currentPlayerTurnOrder: 0,
+        }),
       });
       // Polling will update automatically
     } catch (error) {

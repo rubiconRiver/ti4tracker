@@ -15,18 +15,19 @@ datasource db {
 }
 
 model Game {
-  id            String   @id @default(cuid())
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  status        String   @default("setup") // setup, active, paused, completed
-  currentTurn   Int      @default(0)
-  currentRound  Int      @default(1)
-  speakerPlayerId String? // Player who has the speaker token
-  turnStartedAt DateTime @default(now()) // When the current turn started
+  id                    String   @id @default(cuid())
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  status                String   @default("setup") // setup, active, paused, completed
+  currentTurn           Int      @default(0)
+  currentRound          Int      @default(1)
+  currentPlayerTurnOrder Int     @default(0) // Turn order of the current player
+  speakerPlayerId       String? // Player who has the speaker token
+  turnStartedAt         DateTime @default(now()) // When the current turn started
 
-  players       Player[]
-  history       TurnHistory[]
-  rounds        Round[]
+  players               Player[]
+  history               TurnHistory[]
+  rounds                Round[]
 
   @@index([status])
 }
