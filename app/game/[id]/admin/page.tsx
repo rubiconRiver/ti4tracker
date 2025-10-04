@@ -111,6 +111,21 @@ export default function AdminPanel({ params }: { params: Promise<{ id: string }>
     }
   };
 
+  const resetGame = async () => {
+    if (!confirm('Reset the entire game? This will clear all scores, times, history, and strategy cards, but keep all players.')) return;
+
+    try {
+      await fetch(`/api/games/${id}/reset`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      // Polling will update automatically
+    } catch (error) {
+      console.error('Error resetting game:', error);
+      alert('Failed to reset game');
+    }
+  };
+
   if (!game) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -175,6 +190,14 @@ export default function AdminPanel({ params }: { params: Promise<{ id: string }>
               >
                 Next Round →
               </button>
+              <div className="pt-3 mt-3 border-t">
+                <button
+                  onClick={resetGame}
+                  className="w-full px-4 py-3 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors"
+                >
+                  🔄 Reset Entire Game
+                </button>
+              </div>
             </div>
           </div>
 
