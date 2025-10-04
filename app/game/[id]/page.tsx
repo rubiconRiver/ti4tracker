@@ -77,6 +77,31 @@ export default function GamePage({ params }: { params: Promise<{ id: string }> }
     setCurrentPlayerIndex(playerIndex);
   }, [game]);
 
+  const passTurn = async () => {
+    if (!game || game.status === 'paused') return;
+
+    const currentPlayer = game.players.find((p: Player) => p.turnOrder === game.currentPlayerTurnOrder);
+    if (!currentPlayer) return;
+
+    const turnStartTime = new Date(game.turnStartedAt).getTime();
+    const turnDurationMs = Date.now() - turnStartTime;
+
+    try {
+      await fetch('/api/turns', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          gameId: id,
+          playerId: currentPlayer.id,
+          action: 'pass',
+          turnDurationMs,
+        }),
+      });
+    } catch (error) {
+      console.error('Error passing turn:', error);
+    }
+  };
+
   // Timer for current turn - uses turnStartedAt from database
   useEffect(() => {
     if (!game || game.status === 'paused') {
@@ -112,9 +137,16 @@ export default function GamePage({ params }: { params: Promise<{ id: string }> }
           <div className="text-sm text-gray-400">Round {game.currentRound}</div>
         </div>
         <div className="flex gap-4">
+          <button
+            onClick={passTurn}
+            disabled={game.status === 'paused'}
+            className="px-4 py-2 bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Pass Turn
+          </button>
           <Link
             href={`/game/${id}/admin`}
-            className="px-4 py-2 bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+            className="px-4 py-2 bg-purple-600 rounded-lg hover:bg-purple-700 transition-colors"
           >
             Admin Panel
           </Link>
