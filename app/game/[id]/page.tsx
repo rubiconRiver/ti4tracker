@@ -63,7 +63,10 @@ export default function GamePage({ params }: { params: Promise<{ id: string }> }
 
   // Timer for current turn - uses turnStartedAt from database
   useEffect(() => {
-    if (!game) return;
+    if (!game || game.status === 'paused') {
+      setElapsedTime(0);
+      return;
+    }
 
     const interval = setInterval(() => {
       const turnStartTime = new Date(game.turnStartedAt).getTime();
@@ -110,21 +113,30 @@ export default function GamePage({ params }: { params: Promise<{ id: string }> }
 
       {/* Current Player - Large Display */}
       <div className="flex flex-col items-center justify-center py-16">
-        <div className="text-4xl font-semibold mb-4 text-gray-400">Current Turn</div>
-        <div
-          className={`${colorScheme.bg} ${colorScheme.text} px-24 py-16 rounded-3xl shadow-2xl border-8 ${colorScheme.border}`}
-        >
-          <div className="text-8xl font-bold text-center mb-4">{currentPlayer?.name}</div>
-          {currentPlayer?.faction && (
-            <div className="text-4xl text-center opacity-90">{currentPlayer.faction}</div>
-          )}
-        </div>
+        {game.status === 'paused' ? (
+          <div className="text-center">
+            <div className="text-6xl font-bold text-orange-500 mb-4">⏸ GAME PAUSED</div>
+            <div className="text-2xl text-gray-400">Waiting for admin to resume...</div>
+          </div>
+        ) : (
+          <>
+            <div className="text-4xl font-semibold mb-4 text-gray-400">Current Turn</div>
+            <div
+              className={`${colorScheme.bg} ${colorScheme.text} px-24 py-16 rounded-3xl shadow-2xl border-8 ${colorScheme.border}`}
+            >
+              <div className="text-8xl font-bold text-center mb-4">{currentPlayer?.name}</div>
+              {currentPlayer?.faction && (
+                <div className="text-4xl text-center opacity-90">{currentPlayer.faction}</div>
+              )}
+            </div>
 
-        {/* Turn Timer */}
-        <div className="mt-12 text-6xl font-mono font-bold">
-          {formatTime(elapsedTime)}
-        </div>
-        <div className="text-2xl text-gray-400 mt-2">Turn Time</div>
+            {/* Turn Timer */}
+            <div className="mt-12 text-6xl font-mono font-bold">
+              {formatTime(elapsedTime)}
+            </div>
+            <div className="text-2xl text-gray-400 mt-2">Turn Time</div>
+          </>
+        )}
       </div>
 
       {/* All Players Overview */}

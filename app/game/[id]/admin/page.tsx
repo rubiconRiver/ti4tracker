@@ -111,6 +111,27 @@ export default function AdminPanel({ params }: { params: Promise<{ id: string }>
     }
   };
 
+  const togglePause = async () => {
+    if (!game) return;
+
+    const newStatus = game.status === 'paused' ? 'active' : 'paused';
+
+    try {
+      await fetch(`/api/games/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: newStatus,
+          ...(newStatus === 'active' ? { turnStartedAt: new Date() } : {})
+        }),
+      });
+      // Polling will update automatically
+    } catch (error) {
+      console.error('Error toggling pause:', error);
+      alert('Failed to toggle pause');
+    }
+  };
+
   const resetGame = async () => {
     const confirmation = prompt('⚠️ WARNING: This will reset ALL scores, times, history, and strategy cards!\n\nPlayers will be kept but everything else will be deleted.\n\nType "RESET" to confirm:');
 
@@ -173,11 +194,26 @@ export default function AdminPanel({ params }: { params: Promise<{ id: string }>
             <h2 className="text-xl font-bold mb-4 text-black">Game Controls</h2>
             <div className="space-y-3">
               <div className="text-lg text-gray-700">
+                Status: <span className={`font-bold ${game.status === 'paused' ? 'text-orange-600' : 'text-green-600'}`}>
+                  {game.status === 'paused' ? '⏸ PAUSED' : '▶ ACTIVE'}
+                </span>
+              </div>
+              <div className="text-lg text-gray-700">
                 Round: <span className="font-bold text-black">{game.currentRound}</span>
               </div>
               <div className="text-lg text-gray-700">
                 Current Turn: <span className="font-bold text-black">{game.currentTurn}</span>
               </div>
+              <button
+                onClick={togglePause}
+                className={`w-full px-4 py-3 rounded-lg font-bold text-white transition-colors ${
+                  game.status === 'paused'
+                    ? 'bg-green-600 hover:bg-green-700'
+                    : 'bg-orange-600 hover:bg-orange-700'
+                }`}
+              >
+                {game.status === 'paused' ? '▶ Resume Game' : '⏸ Pause Game'}
+              </button>
               <button
                 onClick={rewindTurn}
                 disabled={game.currentTurn === 0}
