@@ -16,6 +16,7 @@ export async function POST(
         totalTimeMs: 0,
         strategyCard: null,
         hasSpeaker: false,
+        hasPassed: false,
       },
     });
 

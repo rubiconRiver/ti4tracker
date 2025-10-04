@@ -51,18 +51,52 @@ export async function POST(request: Request) {
       },
     });
 
-    // Update player's total time
+    // Update player's total time and pass status
     await db.player.update({
       where: { id: playerId },
       data: {
         totalTimeMs: player.totalTimeMs + actualDurationMs,
+        hasPassed: action === 'pass',
       },
     });
 
-    // Calculate next turn
+    // Check if all players have passed
+    const updatedPlayers = await db.player.findMany({
+      where: { gameId },
+    });
+    const allPassed = updatedPlayers.every((p) => p.hasPassed);
+
+    // If everyone passed, pause the game
+    if (allPassed) {
+      const updatedGame = await db.game.update({
+        where: { id: gameId },
+        data: { status: 'paused' },
+        include: {
+          players: {
+            orderBy: { turnOrder: 'asc' },
+          },
+        },
+      });
+
+      emitToGame(gameId, 'all-passed', { game: updatedGame });
+      return NextResponse.json({ turnHistory, game: updatedGame });
+    }
+
+    // Find next player who hasn't passed
     let nextTurnOrder = player.turnOrder + 1;
-    if (nextTurnOrder >= game.players.length) {
-      nextTurnOrder = 0;
+    let attempts = 0;
+    while (attempts < game.players.length) {
+      if (nextTurnOrder >= game.players.length) {
+        nextTurnOrder = 0;
+      }
+
+      const nextPlayer = game.players.find(p => p.turnOrder === nextTurnOrder);
+      if (nextPlayer && !nextPlayer.hasPassed) {
+        break;
+      }
+
+      nextTurnOrder++;
+      attempts++;
     }
 
     // Update game to next turn and record when it started

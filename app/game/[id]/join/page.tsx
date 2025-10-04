@@ -11,6 +11,7 @@ interface Player {
   turnOrder: number;
   score: number;
   totalTimeMs: number;
+  hasPassed: boolean;
 }
 
 interface Game {
@@ -164,7 +165,7 @@ export default function JoinGame({ params }: { params: Promise<{ id: string }> }
 
   const selectedPlayer = game.players.find((p: Player) => p.id === selectedPlayerId);
   const currentPlayer = game.players[currentPlayerIndex];
-  const isMyTurn = selectedPlayer?.id === currentPlayer?.id && game.status !== 'paused';
+  const isMyTurn = selectedPlayer?.id === currentPlayer?.id && game.status !== 'paused' && !selectedPlayer?.hasPassed;
 
   return (
     <div className="min-h-screen bg-gray-50 pb-32">
@@ -232,7 +233,9 @@ export default function JoinGame({ params }: { params: Promise<{ id: string }> }
           {/* Turn Indicator */}
           <div
             className={`rounded-lg p-6 text-center ${
-              game.status === 'paused'
+              selectedPlayer?.hasPassed
+                ? 'bg-orange-500 text-white'
+                : game.status === 'paused'
                 ? 'bg-orange-500 text-white'
                 : isMyTurn
                 ? 'bg-green-600 text-white'
@@ -240,18 +243,25 @@ export default function JoinGame({ params }: { params: Promise<{ id: string }> }
             }`}
           >
             <div className="text-2xl font-bold">
-              {game.status === 'paused'
+              {selectedPlayer?.hasPassed
+                ? '✓ You Have Passed'
+                : game.status === 'paused'
                 ? '⏸ Game Paused'
                 : isMyTurn
                 ? "It's Your Turn!"
                 : 'Waiting for your turn...'}
             </div>
-            {!isMyTurn && game.status !== 'paused' && (
+            {selectedPlayer?.hasPassed && (
+              <div className="mt-2 text-sm">
+                Waiting for next round...
+              </div>
+            )}
+            {!isMyTurn && game.status !== 'paused' && !selectedPlayer?.hasPassed && (
               <div className="mt-2">
                 Current: {currentPlayer?.name}
               </div>
             )}
-            {game.status === 'paused' && (
+            {game.status === 'paused' && !selectedPlayer?.hasPassed && (
               <div className="mt-2 text-sm">
                 Admin is setting up the round
               </div>

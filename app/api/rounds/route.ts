@@ -39,22 +39,24 @@ export async function POST(request: Request) {
         },
       });
 
-      // Update player's current strategy card and turn order based on card number
+      // Update player's current strategy card, turn order, and clear pass status
       await db.player.update({
         where: { id: assignment.playerId },
         data: {
           strategyCard: assignment.cardNumber,
           turnOrder: assignment.cardNumber - 1, // Card 1 goes first (turnOrder 0)
+          hasPassed: false, // Reset pass status for new round
         },
       });
     }
 
-    // Reset currentTurn to 0 when starting a new round with new turn order
+    // Reset currentTurn to 0 and unpause game when starting a new round with new turn order
     await db.game.update({
       where: { id: gameId },
       data: {
         currentTurn: 0,
         turnStartedAt: new Date(),
+        status: 'active', // Unpause game when round starts
       },
     });
 

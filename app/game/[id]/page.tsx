@@ -15,6 +15,7 @@ interface Player {
   totalTimeMs: number;
   strategyCard: number | null;
   hasSpeaker: boolean;
+  hasPassed: boolean;
 }
 
 interface Game {
@@ -151,8 +152,13 @@ export default function GamePage({ params }: { params: Promise<{ id: string }> }
                 key={player.id}
                 className={`bg-gray-800 rounded-lg p-6 ${
                   isActive ? `ring-4 ${colors.border}` : ''
-                } transition-all`}
+                } ${player.hasPassed ? 'opacity-50' : ''} transition-all relative`}
               >
+                {player.hasPassed && (
+                  <div className="absolute top-2 right-2 bg-orange-500 text-white px-3 py-1 rounded-full text-sm font-bold">
+                    PASSED
+                  </div>
+                )}
                 <div className="flex items-center gap-4 mb-4">
                   <div className={`w-16 h-16 rounded-full ${colors.bg} flex items-center justify-center text-2xl font-bold`}>
                     {player.hasSpeaker && '🔊'}
