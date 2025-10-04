@@ -95,6 +95,22 @@ export default function AdminPanel({ params }: { params: Promise<{ id: string }>
     }
   };
 
+  const resetTurnToStart = async () => {
+    if (!confirm('Reset turn counter to 0? This will make the first player in turn order active.')) return;
+
+    try {
+      await fetch(`/api/games/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currentTurn: 0 }),
+      });
+      // Polling will update automatically
+    } catch (error) {
+      console.error('Error resetting turn:', error);
+      alert('Failed to reset turn');
+    }
+  };
+
   if (!game) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -146,6 +162,12 @@ export default function AdminPanel({ params }: { params: Promise<{ id: string }>
                 className="w-full px-4 py-3 bg-yellow-500 text-black rounded-lg font-medium hover:bg-yellow-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 ⏪ Rewind Turn
+              </button>
+              <button
+                onClick={resetTurnToStart}
+                className="w-full px-4 py-3 bg-orange-600 text-white rounded-lg font-medium hover:bg-orange-700 transition-colors"
+              >
+                🔄 Reset to Turn 0
               </button>
               <button
                 onClick={nextRound}
