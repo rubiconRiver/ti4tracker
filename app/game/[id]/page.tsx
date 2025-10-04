@@ -137,16 +137,9 @@ export default function GamePage({ params }: { params: Promise<{ id: string }> }
           <div className="text-sm text-gray-400">Round {game.currentRound}</div>
         </div>
         <div className="flex gap-4">
-          <button
-            onClick={passTurn}
-            disabled={game.status === 'paused'}
-            className="px-4 py-2 bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Pass Turn
-          </button>
           <Link
             href={`/game/${id}/admin`}
-            className="px-4 py-2 bg-purple-600 rounded-lg hover:bg-purple-700 transition-colors"
+            className="px-4 py-2 bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
           >
             Admin Panel
           </Link>
@@ -197,6 +190,14 @@ export default function GamePage({ params }: { params: Promise<{ id: string }> }
               {formatTime(elapsedTime)}
             </div>
             <div className="text-2xl text-gray-400 mt-2">Turn Time</div>
+
+            {/* Pass Turn Button */}
+            <button
+              onClick={passTurn}
+              className="mt-8 px-8 py-4 bg-blue-600 text-white text-xl rounded-lg hover:bg-blue-700 transition-colors font-medium"
+            >
+              Pass Turn
+            </button>
           </>
         )}
       </div>
