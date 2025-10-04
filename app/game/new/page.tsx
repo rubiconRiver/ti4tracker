@@ -68,14 +68,14 @@ export default function NewGame() {
         });
       }
 
-      // Start the game
+      // Start the game in paused mode (waiting for strategy cards)
       await fetch(`/api/games/${game.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'active' }),
+        body: JSON.stringify({ status: 'paused' }),
       });
 
-      router.push(`/game/${game.id}`);
+      router.push(`/game/${game.id}/admin`);
     } catch (error) {
       console.error('Error creating game:', error);
       alert('Failed to create game');
