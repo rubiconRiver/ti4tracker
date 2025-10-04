@@ -132,6 +132,8 @@ export default function JoinGame({ params }: { params: Promise<{ id: string }> }
   const handlePass = async () => {
     if (!selectedPlayerId || !game) return;
 
+    if (!confirm('Are you sure you want to pass your turn?')) return;
+
     const turnStartTime = new Date(game.turnStartedAt).getTime();
     const turnDurationMs = Date.now() - turnStartTime;
 
@@ -246,21 +248,20 @@ export default function JoinGame({ params }: { params: Promise<{ id: string }> }
           {/* Action Buttons - Fixed at bottom */}
           <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-6 space-y-3">
             <button
-              onClick={handlePass}
-              disabled={!isMyTurn}
-              className="w-full px-6 py-4 bg-yellow-500 text-black rounded-lg font-bold text-xl hover:bg-yellow-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 transform shadow-lg"
-              style={{ minHeight: '60px' }}
-            >
-              Pass Turn
-            </button>
-
-            <button
               onClick={handleEndTurn}
               disabled={!isMyTurn}
               className="w-full px-6 py-4 bg-green-600 text-white rounded-lg font-bold text-xl hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 transform shadow-lg"
               style={{ minHeight: '60px' }}
             >
               End Turn
+            </button>
+
+            <button
+              onClick={handlePass}
+              disabled={!isMyTurn}
+              className="w-full px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-medium text-sm hover:bg-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Pass Turn
             </button>
           </div>
         </div>
