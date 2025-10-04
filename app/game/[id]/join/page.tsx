@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, use } from 'react';
-import { useGameSocket } from '@/components/game/use-game-socket';
+import { useGamePolling } from '@/components/game/use-game-polling';
 
 interface Player {
   id: string;
@@ -40,11 +40,11 @@ function formatTime(ms: number): string {
 
 export default function JoinGame({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const [game, setGame] = useState<Game | null>(null);
+  const { data: game } = useGamePolling(id, { interval: 2000 });
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
   const [currentPlayerIndex, setCurrentPlayerIndex] = useState(0);
   const [turnStartTime, setTurnStartTime] = useState(Date.now());
-  const { socket } = useGameSocket(id);
+  const [prevTurn, setPrevTurn] = useState(0);
 
   // Keep screen awake using Wake Lock API
   useEffect(() => {
@@ -83,34 +83,17 @@ export default function JoinGame({ params }: { params: Promise<{ id: string }> }
   }, []);
 
   useEffect(() => {
-    fetch(`/api/games/${id}`)
-      .then((res) => res.json())
-      .then((data) => {
-        setGame(data);
-        setCurrentPlayerIndex(data.currentTurn % data.players.length);
-      });
-  }, [id]);
+    if (!game) return;
 
-  useEffect(() => {
-    if (!socket) return;
+    const playerIndex = game.currentTurn % game.players.length;
+    setCurrentPlayerIndex(playerIndex);
 
-    socket.on('turn-ended', (data: any) => {
-      setGame(data.game);
-      setCurrentPlayerIndex(data.game.currentTurn % data.game.players.length);
+    // Reset turn timer when turn changes
+    if (game.currentTurn !== prevTurn) {
       setTurnStartTime(Date.now());
-    });
-
-    socket.on('player-updated', () => {
-      fetch(`/api/games/${id}`)
-        .then((res) => res.json())
-        .then((data) => setGame(data));
-    });
-
-    return () => {
-      socket.off('turn-ended');
-      socket.off('player-updated');
-    };
-  }, [socket, id]);
+      setPrevTurn(game.currentTurn);
+    }
+  }, [game, prevTurn]);
 
   const handleEndTurn = async () => {
     if (!selectedPlayerId) return;

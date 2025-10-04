@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, use } from 'react';
-import { useGameSocket } from '@/components/game/use-game-socket';
+import { useGamePolling } from '@/components/game/use-game-polling';
 import StrategyCardAssignment from '@/components/game/strategy-card-assignment';
 import QRCode from 'qrcode';
 
@@ -38,38 +38,14 @@ interface Game {
 
 export default function AdminPanel({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const [game, setGame] = useState<Game | null>(null);
+  const { data: game } = useGamePolling(id, { interval: 2000 });
   const [qrCodeUrl, setQrCodeUrl] = useState('');
-  const { socket } = useGameSocket(id);
 
   useEffect(() => {
-    fetch(`/api/games/${id}`)
-      .then((res) => res.json())
-      .then((data) => setGame(data));
-
     // Generate QR code
     const joinUrl = `${window.location.origin}/game/${id}/join`;
     QRCode.toDataURL(joinUrl, { width: 300 }).then((url) => setQrCodeUrl(url));
   }, [id]);
-
-  useEffect(() => {
-    if (!socket) return;
-
-    socket.on('turn-ended', (data: any) => {
-      setGame(data.game);
-    });
-
-    socket.on('player-updated', () => {
-      fetch(`/api/games/${id}`)
-        .then((res) => res.json())
-        .then((data) => setGame(data));
-    });
-
-    return () => {
-      socket.off('turn-ended');
-      socket.off('player-updated');
-    };
-  }, [socket, id]);
 
   const updateScore = async (playerId: string, newScore: number) => {
     try {
@@ -78,11 +54,7 @@ export default function AdminPanel({ params }: { params: Promise<{ id: string }>
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: playerId, score: newScore }),
       });
-
-      // Refetch game
-      const res = await fetch(`/api/games/${id}`);
-      const data = await res.json();
-      setGame(data);
+      // Polling will update automatically
     } catch (error) {
       console.error('Error updating score:', error);
       alert('Failed to update score');
@@ -100,10 +72,7 @@ export default function AdminPanel({ params }: { params: Promise<{ id: string }>
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ currentTurn: game.currentTurn - 1 }),
       });
-
-      const res = await fetch(`/api/games/${id}`);
-      const data = await res.json();
-      setGame(data);
+      // Polling will update automatically
     } catch (error) {
       console.error('Error rewinding:', error);
       alert('Failed to rewind');
@@ -119,20 +88,11 @@ export default function AdminPanel({ params }: { params: Promise<{ id: string }>
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ gameId: id }),
       });
-
-      const res = await fetch(`/api/games/${id}`);
-      const data = await res.json();
-      setGame(data);
+      // Polling will update automatically
     } catch (error) {
       console.error('Error advancing round:', error);
       alert('Failed to advance round');
     }
-  };
-
-  const refetchGame = async () => {
-    const res = await fetch(`/api/games/${id}`);
-    const data = await res.json();
-    setGame(data);
   };
 
   if (!game) {
@@ -218,7 +178,7 @@ export default function AdminPanel({ params }: { params: Promise<{ id: string }>
             gameId={id}
             players={game.players}
             currentRound={game.currentRound}
-            onAssigned={refetchGame}
+            onAssigned={() => {}}
           />
         </div>
 
