@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { TI4_FACTIONS } from '@/lib/factions';
 
 const TI4_COLORS = [
   { name: 'Red', value: 'red', bg: 'bg-red-600', text: 'text-white' },
@@ -141,13 +142,18 @@ export default function NewGame() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Faction (optional)
                 </label>
-                <input
-                  type="text"
+                <select
                   value={player.faction}
                   onChange={(e) => updatePlayer(index, 'faction', e.target.value)}
-                  placeholder="e.g., The Xxcha Kingdom"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-black"
-                />
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-black bg-white"
+                >
+                  <option value="">Select a faction...</option>
+                  {TI4_FACTIONS.map((faction) => (
+                    <option key={faction} value={faction}>
+                      {faction}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
           ))}

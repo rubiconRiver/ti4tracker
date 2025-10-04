@@ -49,6 +49,14 @@ function formatTime(ms: number): string {
   return `${minutes}:${seconds.toString().padStart(2, '0')}`;
 }
 
+function getFactionInitials(faction: string | null): string {
+  if (!faction) return '';
+
+  // Get first letter of each word (max 3)
+  const words = faction.split(' ').filter(w => w.length > 0);
+  return words.slice(0, 3).map(w => w[0].toUpperCase()).join('');
+}
+
 export default function GamePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { data: game } = useGamePolling(id, { interval: 2000 });
@@ -123,8 +131,13 @@ export default function GamePage({ params }: { params: Promise<{ id: string }> }
           <>
             <div className="text-4xl font-semibold mb-4 text-gray-400">Current Turn</div>
             <div
-              className={`${colorScheme.bg} ${colorScheme.text} px-24 py-16 rounded-3xl shadow-2xl border-8 ${colorScheme.border}`}
+              className={`${colorScheme.bg} ${colorScheme.text} px-24 py-16 rounded-3xl shadow-2xl border-8 ${colorScheme.border} relative`}
             >
+              {currentPlayer?.faction && (
+                <div className="absolute top-8 left-8 w-20 h-20 bg-white bg-opacity-20 rounded-full flex items-center justify-center text-3xl font-bold">
+                  {getFactionInitials(currentPlayer.faction)}
+                </div>
+              )}
               <div className="text-8xl font-bold text-center mb-4">{currentPlayer?.name}</div>
               {currentPlayer?.faction && (
                 <div className="text-4xl text-center opacity-90">{currentPlayer.faction}</div>
@@ -160,8 +173,13 @@ export default function GamePage({ params }: { params: Promise<{ id: string }> }
                   </div>
                 )}
                 <div className="flex items-center gap-4 mb-4">
-                  <div className={`w-16 h-16 rounded-full ${colors.bg} flex items-center justify-center text-2xl font-bold`}>
-                    {player.hasSpeaker && '🔊'}
+                  <div className={`w-16 h-16 rounded-full ${colors.bg} flex items-center justify-center font-bold relative`}>
+                    {player.hasSpeaker && (
+                      <div className="absolute -top-1 -right-1 text-2xl">🔊</div>
+                    )}
+                    <div className="text-white text-lg">
+                      {getFactionInitials(player.faction) || player.name.substring(0, 2).toUpperCase()}
+                    </div>
                   </div>
                   <div>
                     <div className="text-2xl font-bold">{player.name}</div>
