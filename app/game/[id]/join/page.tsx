@@ -162,7 +162,7 @@ export default function JoinGame({ params }: { params: Promise<{ id: string }> }
         <div className="p-6">
           <h2 className="text-2xl font-bold mb-4 text-black">Select Your Player</h2>
           <div className="space-y-3">
-            {game.players.map((player) => {
+            {game.players.map((player: Player) => {
               const colors = COLOR_MAP[player.color] || COLOR_MAP.red;
               return (
                 <button
