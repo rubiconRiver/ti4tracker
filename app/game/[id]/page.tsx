@@ -77,7 +77,7 @@ export default function GamePage({ params }: { params: Promise<{ id: string }> }
     setCurrentPlayerIndex(playerIndex);
   }, [game]);
 
-  const passTurn = async () => {
+  const endTurn = async () => {
     if (!game || game.status === 'paused') return;
 
     const currentPlayer = game.players.find((p: Player) => p.turnOrder === game.currentPlayerTurnOrder);
@@ -93,12 +93,12 @@ export default function GamePage({ params }: { params: Promise<{ id: string }> }
         body: JSON.stringify({
           gameId: id,
           playerId: currentPlayer.id,
-          action: 'pass',
+          action: 'end_turn',
           turnDurationMs,
         }),
       });
     } catch (error) {
-      console.error('Error passing turn:', error);
+      console.error('Error ending turn:', error);
     }
   };
 
@@ -191,12 +191,12 @@ export default function GamePage({ params }: { params: Promise<{ id: string }> }
             </div>
             <div className="text-2xl text-gray-400 mt-2">Turn Time</div>
 
-            {/* Pass Turn Button */}
+            {/* End Turn Button */}
             <button
-              onClick={passTurn}
+              onClick={endTurn}
               className="mt-8 px-8 py-4 bg-blue-600 text-white text-xl rounded-lg hover:bg-blue-700 transition-colors font-medium"
             >
-              Pass Turn
+              End Turn
             </button>
           </>
         )}
