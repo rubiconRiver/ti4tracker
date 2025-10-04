@@ -112,7 +112,14 @@ export default function AdminPanel({ params }: { params: Promise<{ id: string }>
   };
 
   const resetGame = async () => {
-    if (!confirm('Reset the entire game? This will clear all scores, times, history, and strategy cards, but keep all players.')) return;
+    const confirmation = prompt('⚠️ WARNING: This will reset ALL scores, times, history, and strategy cards!\n\nPlayers will be kept but everything else will be deleted.\n\nType "RESET" to confirm:');
+
+    if (confirmation !== 'RESET') {
+      if (confirmation !== null) {
+        alert('Reset cancelled. You must type "RESET" exactly to confirm.');
+      }
+      return;
+    }
 
     try {
       await fetch(`/api/games/${id}/reset`, {
