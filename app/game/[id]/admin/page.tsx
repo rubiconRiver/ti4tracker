@@ -114,7 +114,7 @@ export default function AdminPanel({ params }: { params: Promise<{ id: string }>
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           currentTurn: 0,
-          currentPlayerTurnOrder: 0,
+          currentPlayerTurnOrder: 1,
         }),
       });
       // Polling will update automatically

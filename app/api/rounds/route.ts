@@ -44,7 +44,7 @@ export async function POST(request: Request) {
         where: { id: assignment.playerId },
         data: {
           strategyCard: assignment.cardNumber,
-          turnOrder: assignment.cardNumber - 1, // Card 1 goes first (turnOrder 0)
+          turnOrder: assignment.cardNumber, // Card 1 = turnOrder 1, Card 2 = turnOrder 2, etc.
           hasPassed: false, // Reset pass status for new round
         },
       });
@@ -55,7 +55,7 @@ export async function POST(request: Request) {
       where: { id: gameId },
       data: {
         currentTurn: 0,
-        currentPlayerTurnOrder: 0, // Start with turn order 0 (strategy card 1)
+        currentPlayerTurnOrder: 1, // Start with turn order 1 (strategy card 1)
         turnStartedAt: new Date(),
         status: 'active', // Unpause game when round starts
       },

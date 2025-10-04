@@ -21,7 +21,7 @@ model Game {
   status                String   @default("setup") // setup, active, paused, completed
   currentTurn           Int      @default(0)
   currentRound          Int      @default(1)
-  currentPlayerTurnOrder Int     @default(0) // Turn order of the current player
+  currentPlayerTurnOrder Int     @default(1) // Turn order of the current player (1-8, matches strategy card)
   speakerPlayerId       String? // Player who has the speaker token
   turnStartedAt         DateTime @default(now()) // When the current turn started
 
@@ -40,7 +40,7 @@ model Player {
   name            String
   color           String   // TI4 unit color (red, blue, green, yellow, purple, black, etc.)
   faction         String?  // TI4 faction name (optional)
-  turnOrder       Int      // 0-based turn order (changes each round based on strategy card)
+  turnOrder       Int      // Turn order 1-8 (matches strategy card number)
   strategyCard    Int?     // Current strategy card number (1-8)
 
   score           Int      @default(0)

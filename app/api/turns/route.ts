@@ -87,8 +87,9 @@ export async function POST(request: Request) {
     let nextTurnOrder = player.turnOrder + 1;
     let attempts = 0;
     while (attempts < updatedPlayers.length) {
-      if (nextTurnOrder >= updatedPlayers.length) {
-        nextTurnOrder = 0;
+      // Wrap around: turn order is 1-8, so after 8 comes 1
+      if (nextTurnOrder > 8) {
+        nextTurnOrder = 1;
       }
 
       const nextPlayer = updatedPlayers.find(p => p.turnOrder === nextTurnOrder);
