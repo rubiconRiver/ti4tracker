@@ -46,6 +46,25 @@ export default function JoinGame({ params }: { params: Promise<{ id: string }> }
   const [turnStartTime, setTurnStartTime] = useState(Date.now());
   const [prevTurn, setPrevTurn] = useState(0);
 
+  // Load saved player selection from localStorage on mount
+  useEffect(() => {
+    const savedPlayerId = localStorage.getItem(`ti4-player-${id}`);
+    if (savedPlayerId) {
+      setSelectedPlayerId(savedPlayerId);
+    }
+  }, [id]);
+
+  // Save player selection to localStorage whenever it changes
+  const selectPlayer = (playerId: string) => {
+    setSelectedPlayerId(playerId);
+    localStorage.setItem(`ti4-player-${id}`, playerId);
+  };
+
+  const clearPlayerSelection = () => {
+    setSelectedPlayerId(null);
+    localStorage.removeItem(`ti4-player-${id}`);
+  };
+
   // Keep screen awake using Wake Lock API
   useEffect(() => {
     let wakeLock: any = null;
@@ -167,7 +186,7 @@ export default function JoinGame({ params }: { params: Promise<{ id: string }> }
               return (
                 <button
                   key={player.id}
-                  onClick={() => setSelectedPlayerId(player.id)}
+                  onClick={() => selectPlayer(player.id)}
                   className={`w-full ${colors.bg} ${colors.text} p-6 rounded-lg font-medium text-left flex items-center gap-4 shadow-md active:scale-95 transition-transform`}
                 >
                   <div className={`w-12 h-12 rounded-full ${colors.bg} border-4 border-white`}></div>
@@ -192,7 +211,7 @@ export default function JoinGame({ params }: { params: Promise<{ id: string }> }
                 )}
               </div>
               <button
-                onClick={() => setSelectedPlayerId(null)}
+                onClick={clearPlayerSelection}
                 className="text-blue-600 font-medium"
               >
                 Switch Player
