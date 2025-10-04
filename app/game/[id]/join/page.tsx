@@ -167,7 +167,8 @@ export default function JoinGame({ params }: { params: Promise<{ id: string }> }
   }
 
   const selectedPlayer = game.players.find((p: Player) => p.id === selectedPlayerId);
-  const isMyTurn = selectedPlayer?.turnOrder === currentPlayerIndex;
+  const currentPlayer = game.players[currentPlayerIndex];
+  const isMyTurn = selectedPlayer?.id === currentPlayer?.id;
 
   return (
     <div className="min-h-screen bg-gray-50 pb-32">
@@ -243,7 +244,7 @@ export default function JoinGame({ params }: { params: Promise<{ id: string }> }
             </div>
             {!isMyTurn && (
               <div className="mt-2">
-                Current: {game.players[currentPlayerIndex]?.name}
+                Current: {currentPlayer?.name}
               </div>
             )}
           </div>
