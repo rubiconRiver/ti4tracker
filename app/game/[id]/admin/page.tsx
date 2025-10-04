@@ -15,6 +15,7 @@ interface Player {
   totalTimeMs: number;
   strategyCard: number | null;
   hasSpeaker: boolean;
+  hasPassed: boolean;
 }
 
 interface TurnHistory {
@@ -32,6 +33,8 @@ interface Game {
   status: string;
   currentTurn: number;
   currentRound: number;
+  currentPlayerTurnOrder: number;
+  turnStartedAt: string;
   players: Player[];
   history: TurnHistory[];
 }
@@ -145,6 +148,34 @@ export default function AdminPanel({ params }: { params: Promise<{ id: string }>
     }
   };
 
+  const passTurn = async () => {
+    if (!game || game.status === 'paused') return;
+
+    // Find current player
+    const currentPlayer = game.players.find((p: Player) => p.turnOrder === game.currentPlayerTurnOrder);
+    if (!currentPlayer) return;
+
+    const turnStartTime = new Date(game.turnStartedAt).getTime();
+    const turnDurationMs = Date.now() - turnStartTime;
+
+    try {
+      await fetch('/api/turns', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          gameId: id,
+          playerId: currentPlayer.id,
+          action: 'pass',
+          turnDurationMs,
+        }),
+      });
+      // Polling will update automatically
+    } catch (error) {
+      console.error('Error passing turn:', error);
+      alert('Failed to pass turn');
+    }
+  };
+
   const resetGame = async () => {
     const confirmation = prompt('⚠️ WARNING: This will reset ALL scores, times, history, and strategy cards!\n\nPlayers will be kept but everything else will be deleted.\n\nType "RESET" to confirm:');
 
@@ -226,6 +257,13 @@ export default function AdminPanel({ params }: { params: Promise<{ id: string }>
                 }`}
               >
                 {game.status === 'paused' ? '▶ Resume Game' : '⏸ Pause Game'}
+              </button>
+              <button
+                onClick={passTurn}
+                disabled={game.status === 'paused'}
+                className="w-full px-4 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Pass Current Turn
               </button>
               <button
                 onClick={rewindTurn}
