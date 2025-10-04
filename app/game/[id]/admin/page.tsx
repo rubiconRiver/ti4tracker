@@ -186,7 +186,7 @@ export default function AdminPanel({ params }: { params: Promise<{ id: string }>
         <div className="mt-8 bg-white rounded-lg shadow-md p-6">
           <h2 className="text-xl font-bold mb-4 text-black">Player Scores</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {game.players.map((player) => (
+            {game.players.map((player: Player) => (
               <div key={player.id} className="border rounded-lg p-4">
                 <div className="font-bold text-lg text-black mb-2">{player.name}</div>
                 {player.faction && (
