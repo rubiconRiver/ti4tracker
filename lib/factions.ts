@@ -29,7 +29,7 @@ export const TI4_FACTIONS = [
 
 export const FACTION_ICONS: Record<string, string> = {
   'The Arborec': 'https://static.wikia.nocookie.net/twilight-imperium-4/images/8/8f/ArborecSymbolSquare.png',
-  'The Argent Flight': 'https://static.wikia.nocookie.net/twilight-imperium-4/images/8/8f/ArborecSymbolSquare.png', // placeholder
+  'The Argent Flight': 'https://static.wikia.nocookie.net/twilight-imperium-4/images/1/13/ArgentFactionSymbol.png',
   'The Barony of Letnev': 'https://static.wikia.nocookie.net/twilight-imperium-4/images/2/20/Barony.png',
   'The Clan of Saar': 'https://static.wikia.nocookie.net/twilight-imperium-4/images/b/b0/Saar.png',
   'The Embers of Muaat': 'https://static.wikia.nocookie.net/twilight-imperium-4/images/3/37/MuaatSymbolSquare.png',

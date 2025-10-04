@@ -6,6 +6,7 @@ import { getStrategyCardName, getStrategyCardColor } from '@/lib/strategy-cards'
 import { getFactionIcon } from '@/lib/factions';
 import Link from 'next/link';
 import Image from 'next/image';
+import StrategyCardAssignment from '@/components/game/strategy-card-assignment';
 
 interface Player {
   id: string;
@@ -122,12 +123,17 @@ export default function GamePage({ params }: { params: Promise<{ id: string }> }
         </div>
       </div>
 
-      {/* Current Player - Large Display */}
+      {/* Current Player - Large Display OR Strategy Card Assignment */}
       <div className="flex flex-col items-center justify-center py-16">
         {game.status === 'paused' ? (
-          <div className="text-center">
-            <div className="text-6xl font-bold text-orange-500 mb-4">⏸ GAME PAUSED</div>
-            <div className="text-2xl text-gray-400">Waiting for admin to resume...</div>
+          <div className="w-full max-w-4xl px-8">
+            <div className="text-6xl font-bold text-orange-500 mb-8 text-center">⏸ STRATEGY SELECTION</div>
+            <StrategyCardAssignment
+              gameId={id}
+              players={game.players}
+              currentRound={game.currentRound}
+              onAssigned={() => {}}
+            />
           </div>
         ) : (
           <>
