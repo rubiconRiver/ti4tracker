@@ -65,11 +65,12 @@ export async function POST(request: Request) {
       nextTurnOrder = 0;
     }
 
-    // Update game to next turn
+    // Update game to next turn and record when it started
     const updatedGame = await db.game.update({
       where: { id: gameId },
       data: {
         currentTurn: game.currentTurn + 1,
+        turnStartedAt: now,
       },
       include: {
         players: {

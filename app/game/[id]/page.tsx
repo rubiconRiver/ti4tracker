@@ -52,31 +52,26 @@ export default function GamePage({ params }: { params: Promise<{ id: string }> }
   const { id } = use(params);
   const { data: game } = useGamePolling(id, { interval: 2000 });
   const [currentPlayerIndex, setCurrentPlayerIndex] = useState(0);
-  const [turnStartTime, setTurnStartTime] = useState(Date.now());
   const [elapsedTime, setElapsedTime] = useState(0);
-  const [prevTurn, setPrevTurn] = useState(0);
 
   useEffect(() => {
     if (!game) return;
 
     const playerIndex = game.currentTurn % game.players.length;
     setCurrentPlayerIndex(playerIndex);
+  }, [game]);
 
-    // Reset turn timer when turn changes
-    if (game.currentTurn !== prevTurn) {
-      setTurnStartTime(Date.now());
-      setPrevTurn(game.currentTurn);
-    }
-  }, [game, prevTurn]);
-
-  // Timer for current turn
+  // Timer for current turn - uses turnStartedAt from database
   useEffect(() => {
+    if (!game) return;
+
     const interval = setInterval(() => {
+      const turnStartTime = new Date(game.turnStartedAt).getTime();
       setElapsedTime(Date.now() - turnStartTime);
     }, 100);
 
     return () => clearInterval(interval);
-  }, [turnStartTime]);
+  }, [game]);
 
   if (!game) {
     return (

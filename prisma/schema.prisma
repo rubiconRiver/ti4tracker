@@ -22,6 +22,7 @@ model Game {
   currentTurn   Int      @default(0)
   currentRound  Int      @default(1)
   speakerPlayerId String? // Player who has the speaker token
+  turnStartedAt DateTime @default(now()) // When the current turn started
 
   players       Player[]
   history       TurnHistory[]

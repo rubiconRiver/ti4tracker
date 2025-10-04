@@ -43,8 +43,6 @@ export default function JoinGame({ params }: { params: Promise<{ id: string }> }
   const { data: game } = useGamePolling(id, { interval: 2000 });
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
   const [currentPlayerIndex, setCurrentPlayerIndex] = useState(0);
-  const [turnStartTime, setTurnStartTime] = useState(Date.now());
-  const [prevTurn, setPrevTurn] = useState(0);
 
   // Load saved player selection from localStorage on mount
   useEffect(() => {
@@ -106,17 +104,12 @@ export default function JoinGame({ params }: { params: Promise<{ id: string }> }
 
     const playerIndex = game.currentTurn % game.players.length;
     setCurrentPlayerIndex(playerIndex);
-
-    // Reset turn timer when turn changes
-    if (game.currentTurn !== prevTurn) {
-      setTurnStartTime(Date.now());
-      setPrevTurn(game.currentTurn);
-    }
-  }, [game, prevTurn]);
+  }, [game]);
 
   const handleEndTurn = async () => {
-    if (!selectedPlayerId) return;
+    if (!selectedPlayerId || !game) return;
 
+    const turnStartTime = new Date(game.turnStartedAt).getTime();
     const turnDurationMs = Date.now() - turnStartTime;
 
     try {
@@ -137,8 +130,9 @@ export default function JoinGame({ params }: { params: Promise<{ id: string }> }
   };
 
   const handlePass = async () => {
-    if (!selectedPlayerId) return;
+    if (!selectedPlayerId || !game) return;
 
+    const turnStartTime = new Date(game.turnStartedAt).getTime();
     const turnDurationMs = Date.now() - turnStartTime;
 
     try {

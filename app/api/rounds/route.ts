@@ -52,7 +52,10 @@ export async function POST(request: Request) {
     // Reset currentTurn to 0 when starting a new round with new turn order
     await db.game.update({
       where: { id: gameId },
-      data: { currentTurn: 0 },
+      data: {
+        currentTurn: 0,
+        turnStartedAt: new Date(),
+      },
     });
 
     // Fetch updated game state
