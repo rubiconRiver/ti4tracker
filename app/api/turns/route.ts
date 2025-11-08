@@ -117,10 +117,11 @@ export async function POST(request: Request) {
     });
 
     // Emit real-time update
+    const nextPlayer = updatedPlayers.find(p => p.turnOrder === nextTurnOrder);
     emitToGame(gameId, 'turn-ended', {
       turnHistory,
       game: updatedGame,
-      nextPlayerId: updatedPlayers[nextTurnOrder].id,
+      nextPlayerId: nextPlayer?.id,
     });
 
     return NextResponse.json({ turnHistory, game: updatedGame });
