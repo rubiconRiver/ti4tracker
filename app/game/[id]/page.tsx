@@ -67,6 +67,7 @@ export default function GamePage({ params }: { params: Promise<{ id: string }> }
   const { data: game } = useGamePolling(id, { interval: 2000 });
   const [currentPlayerIndex, setCurrentPlayerIndex] = useState(0);
   const [elapsedTime, setElapsedTime] = useState(0);
+  const [showPassConfirm, setShowPassConfirm] = useState(false);
 
   useEffect(() => {
     if (!game) return;
@@ -99,6 +100,32 @@ export default function GamePage({ params }: { params: Promise<{ id: string }> }
       });
     } catch (error) {
       console.error('Error ending turn:', error);
+    }
+  };
+
+  const passTurn = async () => {
+    if (!game || game.status === 'paused') return;
+
+    const currentPlayer = game.players.find((p: Player) => p.turnOrder === game.currentPlayerTurnOrder);
+    if (!currentPlayer) return;
+
+    const turnStartTime = new Date(game.turnStartedAt).getTime();
+    const turnDurationMs = Date.now() - turnStartTime;
+
+    try {
+      await fetch('/api/turns', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          gameId: id,
+          playerId: currentPlayer.id,
+          action: 'pass',
+          turnDurationMs,
+        }),
+      });
+      setShowPassConfirm(false);
+    } catch (error) {
+      console.error('Error passing turn:', error);
     }
   };
 
@@ -191,13 +218,41 @@ export default function GamePage({ params }: { params: Promise<{ id: string }> }
             </div>
             <div className="text-2xl text-gray-400 mt-2">Turn Time</div>
 
-            {/* End Turn Button */}
-            <button
-              onClick={endTurn}
-              className="mt-8 px-8 py-4 bg-blue-600 text-white text-xl rounded-lg hover:bg-blue-700 transition-colors font-medium"
-            >
-              End Turn
-            </button>
+            {/* Turn Action Buttons */}
+            <div className="mt-8 flex gap-4 items-center">
+              <button
+                onClick={endTurn}
+                className="px-8 py-4 bg-blue-600 text-white text-xl rounded-lg hover:bg-blue-700 transition-colors font-medium"
+              >
+                End Turn
+              </button>
+
+              {/* Pass Button with Confirmation */}
+              {!showPassConfirm ? (
+                <button
+                  onClick={() => setShowPassConfirm(true)}
+                  className="px-4 py-2 bg-orange-600 text-white text-sm rounded-lg hover:bg-orange-700 transition-colors font-medium"
+                >
+                  Pass
+                </button>
+              ) : (
+                <div className="flex gap-2 items-center bg-gray-800 px-4 py-2 rounded-lg">
+                  <span className="text-sm text-gray-300">Pass turn?</span>
+                  <button
+                    onClick={passTurn}
+                    className="px-3 py-1 bg-orange-600 text-white text-sm rounded hover:bg-orange-700 transition-colors"
+                  >
+                    Yes
+                  </button>
+                  <button
+                    onClick={() => setShowPassConfirm(false)}
+                    className="px-3 py-1 bg-gray-600 text-white text-sm rounded hover:bg-gray-700 transition-colors"
+                  >
+                    No
+                  </button>
+                </div>
+              )}
+            </div>
           </>
         )}
       </div>
