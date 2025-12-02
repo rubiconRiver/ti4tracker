@@ -20,6 +20,7 @@ export default function NewGame() {
   ]);
   const [speakerIndex, setSpeakerIndex] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [createdGame, setCreatedGame] = useState<{ id: string; adminPin: string } | null>(null);
 
   const usedColors = new Set(players.map((p) => p.color));
 
@@ -84,7 +85,9 @@ export default function NewGame() {
         body: JSON.stringify({ status: 'paused', adminPin: game.adminPin }),
       });
 
-      router.push(`/game/${game.id}/admin`);
+      // Show the PIN to the user before redirecting
+      setCreatedGame({ id: game.id, adminPin: game.adminPin });
+      setLoading(false);
     } catch (error) {
       console.error('Error creating game:', error);
       alert('Failed to create game');
@@ -255,6 +258,44 @@ export default function NewGame() {
           </Button>
         </div>
       </div>
+
+      {/* PIN Display Modal */}
+      {createdGame && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+          <Card variant="elevated" padding="lg" className="max-w-md w-full text-center">
+            <div className="mb-6">
+              <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <h2 className="text-2xl font-bold mb-2">Game Created!</h2>
+              <p className="text-gray-400">Save this Admin PIN to manage your game</p>
+            </div>
+
+            <div className="bg-gray-800 rounded-lg p-6 mb-6">
+              <div className="text-sm text-gray-400 mb-2">Admin PIN</div>
+              <div className="text-5xl font-mono font-bold tracking-widest text-primary-500">
+                {createdGame.adminPin}
+              </div>
+            </div>
+
+            <p className="text-sm text-gray-500 mb-6">
+              You&apos;ll need this PIN to access the admin panel from other devices.
+              It&apos;s saved on this device automatically.
+            </p>
+
+            <Button
+              variant="primary"
+              size="lg"
+              fullWidth
+              onClick={() => router.push(`/game/${createdGame.id}/admin`)}
+            >
+              Continue to Game
+            </Button>
+          </Card>
+        </div>
+      )}
     </main>
   );
 }
