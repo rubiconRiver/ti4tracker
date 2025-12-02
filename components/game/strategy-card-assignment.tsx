@@ -1,12 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { STRATEGY_CARDS, getStrategyCardColor } from '@/lib/strategy-cards';
+import { STRATEGY_CARDS } from '@/lib/strategy-cards';
 
 interface Player {
   id: string;
   name: string;
   color: string;
+  faction?: string | null;
   strategyCard: number | null;
   hasSpeaker: boolean;
 }
@@ -18,15 +19,29 @@ interface Props {
   onAssigned: () => void;
 }
 
+const COLOR_MAP: Record<string, { bg: string; border: string; accent: string }> = {
+  red: { bg: 'bg-red-600', border: 'border-red-500', accent: 'from-red-500' },
+  blue: { bg: 'bg-blue-600', border: 'border-blue-500', accent: 'from-blue-500' },
+  green: { bg: 'bg-green-600', border: 'border-green-500', accent: 'from-green-500' },
+  yellow: { bg: 'bg-yellow-500', border: 'border-yellow-400', accent: 'from-yellow-400' },
+  purple: { bg: 'bg-purple-600', border: 'border-purple-500', accent: 'from-purple-500' },
+  black: { bg: 'bg-gray-800', border: 'border-gray-600', accent: 'from-gray-600' },
+  orange: { bg: 'bg-orange-600', border: 'border-orange-500', accent: 'from-orange-500' },
+  pink: { bg: 'bg-pink-600', border: 'border-pink-500', accent: 'from-pink-500' },
+};
+
 export default function StrategyCardAssignment({ gameId, players, currentRound, onAssigned }: Props) {
   const [assignments, setAssignments] = useState<Record<string, number>>({});
   const [submitting, setSubmitting] = useState(false);
+  const [selectedPlayer, setSelectedPlayer] = useState<string | null>(null);
 
   const assignedCards = new Set(Object.values(assignments));
   const allAssigned = players.every((p) => assignments[p.id] !== undefined);
+  const assignedCount = Object.keys(assignments).length;
 
   const assignCard = (playerId: string, cardNumber: number) => {
     setAssignments({ ...assignments, [playerId]: cardNumber });
+    setSelectedPlayer(null);
   };
 
   const clearCard = (playerId: string) => {
@@ -64,75 +79,189 @@ export default function StrategyCardAssignment({ gameId, players, currentRound, 
   const speakerPlayer = players.find((p) => p.hasSpeaker);
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-6">
-      <h2 className="text-xl font-bold mb-4 text-black">Strategy Card Assignment - Round {currentRound}</h2>
+    <div className="bg-gray-800/90 backdrop-blur-sm rounded-2xl shadow-2xl p-8 border border-gray-700 animate-slide-up">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h2 className="text-3xl font-bold text-white">Strategy Selection</h2>
+          <p className="text-gray-400 mt-1">Round {currentRound}</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="text-sm text-gray-400">Progress</div>
+          <div className="flex gap-1">
+            {players.map((_, i) => (
+              <div
+                key={i}
+                className={`w-3 h-3 rounded-full transition-all ${
+                  i < assignedCount ? 'bg-green-500' : 'bg-gray-600'
+                }`}
+              />
+            ))}
+          </div>
+          <div className="text-sm font-medium text-white">
+            {assignedCount}/{players.length}
+          </div>
+        </div>
+      </div>
 
+      {/* Speaker Banner */}
       {speakerPlayer && (
-        <div className="mb-4 p-3 bg-yellow-100 rounded-lg">
-          <span className="font-medium text-black">Speaker: {speakerPlayer.name}</span>
+        <div className="mb-6 p-4 rounded-xl bg-gradient-to-r from-yellow-500/20 to-amber-500/10 border border-yellow-500/30 animate-speaker-glow">
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">👑</span>
+            <div>
+              <div className="text-yellow-400 text-sm font-medium">Speaker</div>
+              <div className="text-white font-bold text-lg">{speakerPlayer.name}</div>
+            </div>
+            <div className="ml-auto text-yellow-400/70 text-sm">Picks first</div>
+          </div>
         </div>
       )}
 
-      <div className="space-y-4 mb-6">
-        {players.map((player) => {
+      {/* Player Cards Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
+        {players.map((player, index) => {
           const assignedCard = assignments[player.id];
+          const cardData = assignedCard ? STRATEGY_CARDS.find(c => c.number === assignedCard) : null;
+          const colors = COLOR_MAP[player.color] || COLOR_MAP.purple;
+          const isSelected = selectedPlayer === player.id;
+
           return (
-            <div key={player.id} className="border rounded-lg p-4">
-              <div className="flex items-center justify-between mb-3">
-                <div>
-                  <div className="font-bold text-black">{player.name}</div>
-                  {assignedCard && (
-                    <div className="text-sm text-gray-600">
-                      {STRATEGY_CARDS.find((c) => c.number === assignedCard)?.name}
+            <div
+              key={player.id}
+              className={`relative rounded-xl overflow-hidden transition-all duration-300 ${
+                isSelected ? 'ring-2 ring-white scale-[1.02]' : ''
+              }`}
+              style={{ animationDelay: `${index * 50}ms` }}
+            >
+              {/* Color accent bar */}
+              <div className={`absolute left-0 top-0 bottom-0 w-2 ${colors.bg}`} />
+
+              <div className={`bg-gray-700/80 p-5 pl-6 ${player.hasSpeaker ? 'border border-yellow-500/30' : ''}`}>
+                {/* Player Header */}
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-12 h-12 rounded-full ${colors.bg} flex items-center justify-center text-white font-bold text-lg`}>
+                      {player.name.substring(0, 2).toUpperCase()}
                     </div>
+                    <div>
+                      <div className="font-bold text-white text-xl flex items-center gap-2">
+                        {player.name}
+                        {player.hasSpeaker && <span className="text-yellow-400 text-sm">👑</span>}
+                      </div>
+                      {player.faction && (
+                        <div className="text-sm text-gray-400">{player.faction}</div>
+                      )}
+                    </div>
+                  </div>
+
+                  {assignedCard && (
+                    <button
+                      onClick={() => clearCard(player.id)}
+                      className="text-sm text-gray-400 hover:text-red-400 transition-colors px-3 py-1 rounded-lg hover:bg-red-500/10"
+                    >
+                      Clear
+                    </button>
                   )}
                 </div>
-                {assignedCard && (
-                  <button
-                    onClick={() => clearCard(player.id)}
-                    className="text-sm text-red-600 hover:text-red-700"
+
+                {/* Assigned Card Display or Selection Trigger */}
+                {assignedCard && cardData ? (
+                  <div
+                    className={`${cardData.gradient} rounded-xl p-4 shadow-lg ${cardData.glow} shadow-lg cursor-pointer hover:scale-[1.02] transition-transform`}
+                    onClick={() => setSelectedPlayer(isSelected ? null : player.id)}
                   >
-                    Clear
+                    <div className="flex items-center gap-4">
+                      <span className="text-3xl">{cardData.icon}</span>
+                      <div>
+                        <div className="text-white/70 text-sm">Strategy Card</div>
+                        <div className="text-white font-bold text-xl">
+                          {cardData.number}. {cardData.name}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setSelectedPlayer(isSelected ? null : player.id)}
+                    className={`w-full rounded-xl p-4 border-2 border-dashed transition-all ${
+                      isSelected
+                        ? 'border-white bg-white/10'
+                        : 'border-gray-500 hover:border-gray-400 hover:bg-gray-600/50'
+                    }`}
+                  >
+                    <div className="text-gray-400 font-medium">
+                      {isSelected ? 'Select a card below...' : 'Tap to assign card'}
+                    </div>
                   </button>
                 )}
-              </div>
 
-              <div className="grid grid-cols-4 gap-2">
-                {STRATEGY_CARDS.map((card) => {
-                  const isAssignedToOther = assignedCards.has(card.number) && assignments[player.id] !== card.number;
-                  const isAssignedToThis = assignments[player.id] === card.number;
+                {/* Card Selection Grid - Shows when player is selected */}
+                {isSelected && (
+                  <div className="mt-4 grid grid-cols-4 gap-2 animate-slide-up">
+                    {STRATEGY_CARDS.map((card) => {
+                      const isAssignedToOther = assignedCards.has(card.number) && assignments[player.id] !== card.number;
+                      const isAssignedToThis = assignments[player.id] === card.number;
 
-                  return (
-                    <button
-                      key={card.number}
-                      onClick={() => assignCard(player.id, card.number)}
-                      disabled={isAssignedToOther}
-                      className={`px-3 py-2 rounded-lg font-medium text-white text-sm transition-all ${
-                        card.color
-                      } ${
-                        isAssignedToThis
-                          ? 'ring-2 ring-offset-2 ring-black'
-                          : isAssignedToOther
-                          ? 'opacity-30 cursor-not-allowed'
-                          : 'opacity-70 hover:opacity-100'
-                      }`}
-                    >
-                      {card.number}
-                    </button>
-                  );
-                })}
+                      return (
+                        <button
+                          key={card.number}
+                          onClick={() => !isAssignedToOther && assignCard(player.id, card.number)}
+                          disabled={isAssignedToOther}
+                          className={`relative rounded-lg p-3 transition-all ${card.gradient} ${
+                            isAssignedToThis
+                              ? `ring-2 ring-white shadow-lg ${card.glow}`
+                              : isAssignedToOther
+                              ? 'opacity-20 cursor-not-allowed grayscale'
+                              : 'opacity-80 hover:opacity-100 hover:scale-105'
+                          }`}
+                        >
+                          <div className="text-center">
+                            <div className="text-xl mb-1">{card.icon}</div>
+                            <div className="text-white font-bold text-lg">{card.number}</div>
+                            <div className="text-white/80 text-xs truncate">{card.name}</div>
+                          </div>
+                          {isAssignedToOther && (
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <span className="text-white/50 text-xl">✗</span>
+                            </div>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </div>
           );
         })}
       </div>
 
+      {/* Start Round Button */}
       <button
         onClick={submitAssignments}
         disabled={!allAssigned || submitting}
-        className="w-full px-6 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        className={`w-full py-5 rounded-xl font-bold text-xl transition-all ${
+          allAssigned && !submitting
+            ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-400 hover:to-emerald-500 animate-pulse-ready'
+            : 'bg-gray-600 text-gray-400 cursor-not-allowed'
+        }`}
       >
-        {submitting ? 'Assigning...' : 'Start Round'}
+        {submitting ? (
+          <span className="flex items-center justify-center gap-3">
+            <svg className="animate-spin h-6 w-6" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+            </svg>
+            Starting Round...
+          </span>
+        ) : allAssigned ? (
+          <span className="flex items-center justify-center gap-2">
+            🚀 Start Round {currentRound}
+          </span>
+        ) : (
+          <span>Assign all cards to continue ({assignedCount}/{players.length})</span>
+        )}
       </button>
     </div>
   );

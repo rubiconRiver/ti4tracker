@@ -182,8 +182,7 @@ export default function GamePage({ params }: { params: Promise<{ id: string }> }
       {/* Current Player - Large Display OR Strategy Card Assignment */}
       <div className="flex flex-col items-center justify-center py-16">
         {game.status === 'paused' ? (
-          <div className="w-full max-w-4xl px-8">
-            <div className="text-6xl font-bold text-orange-500 mb-8 text-center">⏸ STRATEGY SELECTION</div>
+          <div className="w-full max-w-5xl px-8">
             <StrategyCardAssignment
               gameId={id}
               players={game.players}
