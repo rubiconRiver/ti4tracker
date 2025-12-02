@@ -3,6 +3,9 @@
 import { useEffect, useState, use } from 'react';
 import { useGamePolling } from '@/components/game/use-game-polling';
 import StrategyCardAssignment from '@/components/game/strategy-card-assignment';
+import { Button, Card, Badge, Input } from '@/components/ui';
+import { getPlayerColor, type PlayerColorId } from '@/lib/design-system/tokens/colors';
+import Link from 'next/link';
 import QRCode from 'qrcode';
 
 interface Player {
@@ -45,9 +48,8 @@ export default function AdminPanel({ params }: { params: Promise<{ id: string }>
   const [qrCodeUrl, setQrCodeUrl] = useState('');
 
   useEffect(() => {
-    // Generate QR code
     const joinUrl = `${window.location.origin}/game/${id}/join`;
-    QRCode.toDataURL(joinUrl, { width: 300 }).then((url) => setQrCodeUrl(url));
+    QRCode.toDataURL(joinUrl, { width: 300, margin: 2 }).then((url) => setQrCodeUrl(url));
   }, [id]);
 
   const updateScore = async (playerId: string, newScore: number) => {
@@ -57,20 +59,16 @@ export default function AdminPanel({ params }: { params: Promise<{ id: string }>
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: playerId, score: newScore }),
       });
-      // Polling will update automatically
     } catch (error) {
       console.error('Error updating score:', error);
-      alert('Failed to update score');
     }
   };
 
   const rewindTurn = async () => {
     if (!game || game.currentTurn === 0) return;
-
     if (!confirm('Rewind to the previous turn?')) return;
 
     try {
-      // Get the last turn from history to find previous player
       const lastTurn = game.history[0];
       if (!lastTurn) return;
 
@@ -85,10 +83,8 @@ export default function AdminPanel({ params }: { params: Promise<{ id: string }>
           currentPlayerTurnOrder: previousPlayer.turnOrder,
         }),
       });
-      // Polling will update automatically
     } catch (error) {
       console.error('Error rewinding:', error);
-      alert('Failed to rewind');
     }
   };
 
@@ -101,15 +97,13 @@ export default function AdminPanel({ params }: { params: Promise<{ id: string }>
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ gameId: id }),
       });
-      // Polling will update automatically
     } catch (error) {
       console.error('Error advancing round:', error);
-      alert('Failed to advance round');
     }
   };
 
   const resetTurnToStart = async () => {
-    if (!confirm('Reset turn counter to 0? This will make the first player in turn order active.')) return;
+    if (!confirm('Reset turn counter to 0?')) return;
 
     try {
       await fetch(`/api/games/${id}`, {
@@ -120,10 +114,8 @@ export default function AdminPanel({ params }: { params: Promise<{ id: string }>
           currentPlayerTurnOrder: 1,
         }),
       });
-      // Polling will update automatically
     } catch (error) {
       console.error('Error resetting turn:', error);
-      alert('Failed to reset turn');
     }
   };
 
@@ -141,17 +133,14 @@ export default function AdminPanel({ params }: { params: Promise<{ id: string }>
           ...(newStatus === 'active' ? { turnStartedAt: new Date() } : {})
         }),
       });
-      // Polling will update automatically
     } catch (error) {
       console.error('Error toggling pause:', error);
-      alert('Failed to toggle pause');
     }
   };
 
   const passTurn = async () => {
     if (!game || game.status === 'paused') return;
 
-    // Find current player
     const currentPlayer = game.players.find((p: Player) => p.turnOrder === game.currentPlayerTurnOrder);
     if (!currentPlayer) return;
 
@@ -169,146 +158,184 @@ export default function AdminPanel({ params }: { params: Promise<{ id: string }>
           turnDurationMs,
         }),
       });
-      // Polling will update automatically
     } catch (error) {
       console.error('Error passing turn:', error);
-      alert('Failed to pass turn');
     }
   };
 
   const resetGame = async () => {
-    const confirmation = prompt('⚠️ WARNING: This will reset ALL scores, times, history, and strategy cards!\n\nPlayers will be kept but everything else will be deleted.\n\nType "RESET" to confirm:');
-
-    if (confirmation !== 'RESET') {
-      if (confirmation !== null) {
-        alert('Reset cancelled. You must type "RESET" exactly to confirm.');
-      }
-      return;
-    }
+    const confirmation = prompt('Type "RESET" to confirm resetting the entire game:');
+    if (confirmation !== 'RESET') return;
 
     try {
       await fetch(`/api/games/${id}/reset`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       });
-      // Polling will update automatically
     } catch (error) {
       console.error('Error resetting game:', error);
-      alert('Failed to reset game');
     }
   };
 
   if (!game) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-2xl text-gray-600">Loading...</div>
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+        <div className="text-2xl text-gray-400">Loading...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
-      <div className="max-w-6xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-black">Admin Panel</h1>
-          <a
-            href={`/game/${id}`}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
-            View TV Display
-          </a>
+    <div className="min-h-screen bg-gray-900 text-white">
+      {/* Header */}
+      <div className="bg-gray-800 border-b border-gray-700 px-8 py-4">
+        <div className="max-w-7xl mx-auto flex justify-between items-center">
+          <div>
+            <h1 className="text-2xl font-bold">Admin Panel</h1>
+            <p className="text-sm text-gray-400">Manage your TI4 game</p>
+          </div>
+          <Link href={`/game/${id}`}>
+            <Button variant="secondary" size="md">
+              View TV Display
+            </Button>
+          </Link>
         </div>
+      </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* QR Code */}
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h2 className="text-xl font-bold mb-4 text-black">Join Game</h2>
+      {/* Content */}
+      <div className="max-w-7xl mx-auto px-8 py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+          {/* QR Code Card */}
+          <Card variant="elevated" padding="lg">
+            <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+              <span>📱</span> Join Game
+            </h2>
             {qrCodeUrl && (
-              <div>
-                <img src={qrCodeUrl} alt="QR Code" className="w-full" />
-                <div className="mt-4 text-sm text-gray-600 break-all">
-                  {window.location.origin}/game/{id}/join
+              <div className="flex flex-col items-center">
+                <div className="bg-white p-3 rounded-xl">
+                  <img src={qrCodeUrl} alt="QR Code" className="w-48 h-48" />
                 </div>
+                <p className="mt-4 text-sm text-gray-400 text-center break-all">
+                  {typeof window !== 'undefined' && window.location.origin}/game/{id}/join
+                </p>
               </div>
             )}
-          </div>
+          </Card>
 
-          {/* Game Controls */}
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h2 className="text-xl font-bold mb-4 text-black">Game Controls</h2>
-            <div className="space-y-3">
-              <div className="text-lg text-gray-700">
-                Status: <span className={`font-bold ${game.status === 'paused' ? 'text-orange-600' : 'text-green-600'}`}>
+          {/* Game Controls Card */}
+          <Card variant="elevated" padding="lg">
+            <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+              <span>🎮</span> Game Controls
+            </h2>
+
+            {/* Status Display */}
+            <div className="space-y-3 mb-6">
+              <div className="flex justify-between items-center">
+                <span className="text-gray-400">Status</span>
+                <Badge
+                  variant={game.status === 'paused' ? 'warning' : 'success'}
+                  size="lg"
+                >
                   {game.status === 'paused' ? '⏸ PAUSED' : '▶ ACTIVE'}
-                </span>
+                </Badge>
               </div>
-              <div className="text-lg text-gray-700">
-                Round: <span className="font-bold text-black">{game.currentRound}</span>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-400">Round</span>
+                <span className="text-2xl font-bold">{game.currentRound}</span>
               </div>
-              <div className="text-lg text-gray-700">
-                Current Turn: <span className="font-bold text-black">{game.currentTurn}</span>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-400">Turn</span>
+                <span className="text-2xl font-bold">{game.currentTurn}</span>
               </div>
-              <button
+            </div>
+
+            {/* Control Buttons */}
+            <div className="space-y-3">
+              <Button
+                variant={game.status === 'paused' ? 'primary' : 'ghost'}
+                fullWidth
                 onClick={togglePause}
-                className={`w-full px-4 py-3 rounded-lg font-bold text-white transition-colors ${
-                  game.status === 'paused'
-                    ? 'bg-green-600 hover:bg-green-700'
-                    : 'bg-orange-600 hover:bg-orange-700'
-                }`}
+                className={game.status !== 'paused' ? 'text-orange-400 border-orange-500/50 hover:bg-orange-500/10' : ''}
               >
                 {game.status === 'paused' ? '▶ Resume Game' : '⏸ Pause Game'}
-              </button>
-              <button
+              </Button>
+
+              <Button
+                variant="secondary"
+                fullWidth
                 onClick={passTurn}
                 disabled={game.status === 'paused'}
-                className="w-full px-4 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Pass Current Turn
-              </button>
-              <button
-                onClick={rewindTurn}
-                disabled={game.currentTurn === 0}
-                className="w-full px-4 py-3 bg-yellow-500 text-black rounded-lg font-medium hover:bg-yellow-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                ⏪ Rewind Turn
-              </button>
-              <button
-                onClick={resetTurnToStart}
-                className="w-full px-4 py-3 bg-orange-600 text-white rounded-lg font-medium hover:bg-orange-700 transition-colors"
-              >
-                🔄 Reset to Turn 0
-              </button>
-              <button
+              </Button>
+
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  variant="ghost"
+                  onClick={rewindTurn}
+                  disabled={game.currentTurn === 0}
+                >
+                  ⏪ Rewind
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={resetTurnToStart}
+                >
+                  🔄 Reset Turn
+                </Button>
+              </div>
+
+              <Button
+                variant="ghost"
+                fullWidth
                 onClick={nextRound}
-                className="w-full px-4 py-3 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 transition-colors"
+                className="text-purple-400 border-purple-500/50 hover:bg-purple-500/10"
               >
                 Next Round →
-              </button>
-              <div className="pt-3 mt-3 border-t">
-                <button
+              </Button>
+
+              <div className="pt-3 mt-3 border-t border-gray-700">
+                <Button
+                  variant="danger"
+                  fullWidth
                   onClick={resetGame}
-                  className="w-full px-4 py-3 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors"
                 >
-                  🔄 Reset Entire Game
-                </button>
+                  Reset Entire Game
+                </Button>
               </div>
             </div>
-          </div>
+          </Card>
 
-          {/* Recent History */}
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h2 className="text-xl font-bold mb-4 text-black">Recent Actions</h2>
-            <div className="space-y-2 max-h-64 overflow-y-auto">
-              {game.history.slice(0, 10).map((turn: TurnHistory) => (
-                <div key={turn.id} className="text-sm text-gray-700 border-b pb-2">
-                  <span className="font-medium">{turn.playerName}</span> - {turn.action}
-                  <div className="text-xs text-gray-500">
-                    Turn {turn.turnNumber}
-                  </div>
-                </div>
-              ))}
+          {/* Recent History Card */}
+          <Card variant="elevated" padding="lg">
+            <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+              <span>📜</span> Recent Actions
+            </h2>
+            <div className="space-y-2 max-h-80 overflow-y-auto">
+              {game.history.length === 0 ? (
+                <p className="text-gray-500 text-sm">No actions yet</p>
+              ) : (
+                game.history.slice(0, 10).map((turn: TurnHistory) => {
+                  const playerColor = getPlayerColor(turn.playerColor as PlayerColorId);
+                  return (
+                    <div
+                      key={turn.id}
+                      className="flex items-center gap-3 p-2 rounded-lg bg-gray-800/50"
+                    >
+                      <div className={`w-3 h-3 rounded-full ${playerColor.bg}`} />
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium truncate">{turn.playerName}</div>
+                        <div className="text-xs text-gray-500">
+                          {turn.action} · Turn {turn.turnNumber}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
             </div>
-          </div>
+          </Card>
         </div>
 
         {/* Strategy Card Assignment */}
@@ -322,28 +349,58 @@ export default function AdminPanel({ params }: { params: Promise<{ id: string }>
         </div>
 
         {/* Player Scores */}
-        <div className="mt-8 bg-white rounded-lg shadow-md p-6">
-          <h2 className="text-xl font-bold mb-4 text-black">Player Scores</h2>
+        <Card variant="elevated" padding="lg" className="mt-8">
+          <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
+            <span>🏆</span> Player Scores
+          </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {game.players.map((player: Player) => (
-              <div key={player.id} className="border rounded-lg p-4">
-                <div className="font-bold text-lg text-black mb-2">{player.name}</div>
-                {player.faction && (
-                  <div className="text-sm text-gray-600 mb-3">{player.faction}</div>
-                )}
-                <div className="flex items-center gap-2">
-                  <label className="text-sm text-gray-600">Score:</label>
-                  <input
-                    type="number"
-                    value={player.score}
-                    onChange={(e) => updateScore(player.id, parseInt(e.target.value) || 0)}
-                    className="w-20 px-2 py-1 border border-gray-300 rounded text-black"
-                  />
-                </div>
-              </div>
-            ))}
+            {game.players.map((player: Player) => {
+              const playerColor = getPlayerColor(player.color as PlayerColorId);
+              return (
+                <Card
+                  key={player.id}
+                  variant="player"
+                  playerColor={player.color as PlayerColorId}
+                  padding="md"
+                >
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className={`w-10 h-10 rounded-full ${playerColor.bg} flex items-center justify-center ${playerColor.text} font-bold`}>
+                      {player.name.substring(0, 2).toUpperCase()}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-bold truncate">{player.name}</div>
+                      {player.faction && (
+                        <div className="text-xs text-gray-400 truncate">{player.faction}</div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => updateScore(player.id, Math.max(0, player.score - 1))}
+                      className="w-10 h-10 p-0"
+                    >
+                      −
+                    </Button>
+                    <div className="flex-1 text-center">
+                      <div className="text-3xl font-bold">{player.score}</div>
+                      <div className="text-xs text-gray-500">points</div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => updateScore(player.id, player.score + 1)}
+                      className="w-10 h-10 p-0"
+                    >
+                      +
+                    </Button>
+                  </div>
+                </Card>
+              );
+            })}
           </div>
-        </div>
+        </Card>
       </div>
     </div>
   );

@@ -2,6 +2,9 @@
 
 import { useEffect, useState, use } from 'react';
 import { useGamePolling } from '@/components/game/use-game-polling';
+import { Button, Card, Badge } from '@/components/ui';
+import { TurnStatusCard, type TurnStatus } from '@/components/game/turn-status-card';
+import { getPlayerColor, type PlayerColorId } from '@/lib/design-system/tokens/colors';
 
 interface Player {
   id: string;
@@ -12,32 +15,28 @@ interface Player {
   score: number;
   totalTimeMs: number;
   hasPassed: boolean;
+  hasSpeaker: boolean;
 }
 
 interface Game {
   id: string;
   status: string;
   currentTurn: number;
+  currentRound: number;
   currentPlayerTurnOrder: number;
   turnStartedAt: string;
   players: Player[];
 }
 
-const COLOR_MAP: Record<string, { bg: string; text: string }> = {
-  red: { bg: 'bg-red-600', text: 'text-white' },
-  blue: { bg: 'bg-blue-600', text: 'text-white' },
-  green: { bg: 'bg-green-600', text: 'text-white' },
-  yellow: { bg: 'bg-yellow-500', text: 'text-black' },
-  purple: { bg: 'bg-purple-600', text: 'text-white' },
-  black: { bg: 'bg-gray-900', text: 'text-white' },
-  orange: { bg: 'bg-orange-600', text: 'text-white' },
-  pink: { bg: 'bg-pink-600', text: 'text-white' },
-};
-
 function formatTime(ms: number): string {
   const totalSeconds = Math.floor(ms / 1000);
-  const minutes = Math.floor(totalSeconds / 60);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
   const seconds = totalSeconds % 60;
+
+  if (hours > 0) {
+    return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  }
   return `${minutes}:${seconds.toString().padStart(2, '0')}`;
 }
 
@@ -47,7 +46,7 @@ export default function JoinGame({ params }: { params: Promise<{ id: string }> }
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
   const [currentPlayerIndex, setCurrentPlayerIndex] = useState(0);
 
-  // Load saved player selection from localStorage on mount
+  // Load saved player selection from localStorage
   useEffect(() => {
     const savedPlayerId = localStorage.getItem(`ti4-player-${id}`);
     if (savedPlayerId) {
@@ -55,7 +54,6 @@ export default function JoinGame({ params }: { params: Promise<{ id: string }> }
     }
   }, [id]);
 
-  // Save player selection to localStorage whenever it changes
   const selectPlayer = (playerId: string) => {
     setSelectedPlayerId(playerId);
     localStorage.setItem(`ti4-player-${id}`, playerId);
@@ -66,15 +64,14 @@ export default function JoinGame({ params }: { params: Promise<{ id: string }> }
     localStorage.removeItem(`ti4-player-${id}`);
   };
 
-  // Keep screen awake using Wake Lock API
+  // Keep screen awake
   useEffect(() => {
-    let wakeLock: any = null;
+    let wakeLock: WakeLockSentinel | null = null;
 
     const requestWakeLock = async () => {
       try {
         if ('wakeLock' in navigator) {
-          wakeLock = await (navigator as any).wakeLock.request('screen');
-          console.log('Wake Lock activated');
+          wakeLock = await navigator.wakeLock.request('screen');
         }
       } catch (err) {
         console.log('Wake Lock error:', err);
@@ -83,9 +80,8 @@ export default function JoinGame({ params }: { params: Promise<{ id: string }> }
 
     requestWakeLock();
 
-    // Re-acquire wake lock when page becomes visible again
     const handleVisibilityChange = () => {
-      if (wakeLock !== null && document.visibilityState === 'visible') {
+      if (document.visibilityState === 'visible') {
         requestWakeLock();
       }
     };
@@ -94,18 +90,12 @@ export default function JoinGame({ params }: { params: Promise<{ id: string }> }
 
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
-      if (wakeLock !== null) {
-        wakeLock.release().then(() => {
-          console.log('Wake Lock released');
-        });
-      }
+      wakeLock?.release();
     };
   }, []);
 
   useEffect(() => {
     if (!game) return;
-
-    // Find player with current turn order
     const currentPlayer = game.players.find((p: Player) => p.turnOrder === game.currentPlayerTurnOrder);
     const playerIndex = currentPlayer ? game.players.indexOf(currentPlayer) : 0;
     setCurrentPlayerIndex(playerIndex);
@@ -130,14 +120,12 @@ export default function JoinGame({ params }: { params: Promise<{ id: string }> }
       });
     } catch (error) {
       console.error('Error ending turn:', error);
-      alert('Failed to end turn');
     }
   };
 
   const handlePass = async () => {
     if (!selectedPlayerId || !game) return;
-
-    if (!confirm('Are you sure you want to pass your turn?')) return;
+    if (!confirm('Are you sure you want to pass?')) return;
 
     const turnStartTime = new Date(game.turnStartedAt).getTime();
     const turnDurationMs = Date.now() - turnStartTime;
@@ -155,14 +143,13 @@ export default function JoinGame({ params }: { params: Promise<{ id: string }> }
       });
     } catch (error) {
       console.error('Error passing:', error);
-      alert('Failed to pass');
     }
   };
 
   if (!game) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-2xl text-gray-600">Loading...</div>
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+        <div className="text-2xl text-gray-400">Loading...</div>
       </div>
     );
   }
@@ -171,31 +158,61 @@ export default function JoinGame({ params }: { params: Promise<{ id: string }> }
   const currentPlayer = game.players[currentPlayerIndex];
   const isMyTurn = selectedPlayer?.id === currentPlayer?.id && game.status !== 'paused' && !selectedPlayer?.hasPassed;
 
+  // Determine turn status
+  const getTurnStatus = (): TurnStatus => {
+    if (selectedPlayer?.hasPassed) return 'passed';
+    if (game.status === 'paused') return 'paused';
+    if (isMyTurn) return 'your-turn';
+    return 'waiting';
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50 pb-32">
+    <div className="min-h-screen bg-gray-900 text-white pb-40">
       {/* Header */}
-      <div className="bg-white shadow-sm px-6 py-4 sticky top-0 z-10">
-        <h1 className="text-xl font-bold text-black">TI4 Tracker - Player View</h1>
+      <div className="bg-gray-800 border-b border-gray-700 px-6 py-4 sticky top-0 z-10">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-lg font-bold">TI4 Tracker</h1>
+            <p className="text-xs text-gray-400">Round {game.currentRound}</p>
+          </div>
+          {selectedPlayerId && (
+            <Button variant="ghost" size="sm" onClick={clearPlayerSelection}>
+              Switch
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Player Selection */}
       {!selectedPlayerId ? (
         <div className="p-6">
-          <h2 className="text-2xl font-bold mb-4 text-black">Select Your Player</h2>
+          <h2 className="text-2xl font-bold mb-2">Select Your Player</h2>
+          <p className="text-gray-400 mb-6">Tap your name to join the game</p>
+
           <div className="space-y-3">
             {game.players.map((player: Player) => {
-              const colors = COLOR_MAP[player.color] || COLOR_MAP.red;
+              const colors = getPlayerColor(player.color as PlayerColorId);
               return (
                 <button
                   key={player.id}
                   onClick={() => selectPlayer(player.id)}
-                  className={`w-full ${colors.bg} ${colors.text} p-6 rounded-lg font-medium text-left flex items-center gap-4 shadow-md active:scale-95 transition-transform`}
+                  className={`w-full ${colors.bg} p-5 rounded-xl font-medium text-left flex items-center gap-4 shadow-lg active:scale-[0.98] transition-transform`}
                 >
-                  <div className={`w-12 h-12 rounded-full ${colors.bg} border-4 border-white`}></div>
-                  <div>
-                    <div className="text-2xl font-bold">{player.name}</div>
-                    {player.faction && <div className="opacity-90">{player.faction}</div>}
+                  <div className={`w-14 h-14 rounded-full bg-white/20 flex items-center justify-center ${colors.text} font-bold text-xl`}>
+                    {player.name.substring(0, 2).toUpperCase()}
                   </div>
+                  <div className="flex-1">
+                    <div className={`text-xl font-bold ${colors.text} flex items-center gap-2`}>
+                      {player.name}
+                      {player.hasSpeaker && <span className="text-sm">👑</span>}
+                    </div>
+                    {player.faction && (
+                      <div className={`${colors.text} opacity-80 text-sm`}>{player.faction}</div>
+                    )}
+                  </div>
+                  {player.hasPassed && (
+                    <Badge variant="warning" size="sm">PASSED</Badge>
+                  )}
                 </button>
               );
             })}
@@ -204,93 +221,90 @@ export default function JoinGame({ params }: { params: Promise<{ id: string }> }
       ) : (
         <div className="p-6 space-y-6">
           {/* Selected Player Info */}
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <div className="flex items-center justify-between mb-4">
+          <Card
+            variant="player"
+            playerColor={selectedPlayer?.color as PlayerColorId}
+            padding="lg"
+          >
+            <div className="flex items-center gap-4 mb-4">
+              <div className={`w-16 h-16 rounded-full ${getPlayerColor(selectedPlayer?.color as PlayerColorId).bg} flex items-center justify-center font-bold text-2xl ${getPlayerColor(selectedPlayer?.color as PlayerColorId).text}`}>
+                {selectedPlayer?.name.substring(0, 2).toUpperCase()}
+              </div>
               <div>
-                <div className="text-2xl font-bold text-black">{selectedPlayer?.name}</div>
+                <div className="text-2xl font-bold flex items-center gap-2">
+                  {selectedPlayer?.name}
+                  {selectedPlayer?.hasSpeaker && (
+                    <Badge variant="warning" size="sm" icon={<span>👑</span>}>Speaker</Badge>
+                  )}
+                </div>
                 {selectedPlayer?.faction && (
-                  <div className="text-gray-600">{selectedPlayer.faction}</div>
+                  <div className="text-gray-400">{selectedPlayer.faction}</div>
                 )}
               </div>
-              <button
-                onClick={clearPlayerSelection}
-                className="text-blue-600 font-medium"
-              >
-                Switch Player
-              </button>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-700">
               <div>
-                <div className="text-sm text-gray-600">Score</div>
-                <div className="text-3xl font-bold text-black">{selectedPlayer?.score}</div>
+                <div className="text-sm text-gray-400">Score</div>
+                <div className="text-4xl font-bold">{selectedPlayer?.score}</div>
               </div>
               <div>
-                <div className="text-sm text-gray-600">Total Time</div>
-                <div className="text-xl font-mono text-black">
-                  {formatTime(selectedPlayer?.totalTimeMs || 0)}
-                </div>
+                <div className="text-sm text-gray-400">Total Time</div>
+                <div className="text-2xl font-mono">{formatTime(selectedPlayer?.totalTimeMs || 0)}</div>
               </div>
             </div>
-          </div>
+          </Card>
 
-          {/* Turn Indicator */}
-          <div
-            className={`rounded-lg p-6 text-center ${
-              selectedPlayer?.hasPassed
-                ? 'bg-orange-500 text-white'
-                : game.status === 'paused'
-                ? 'bg-orange-500 text-white'
-                : isMyTurn
-                ? 'bg-green-600 text-white'
-                : 'bg-gray-200 text-gray-600'
-            }`}
+          {/* Turn Status */}
+          <TurnStatusCard
+            status={getTurnStatus()}
+            playerName={currentPlayer?.name}
+            message={
+              getTurnStatus() === 'paused'
+                ? 'Waiting for strategy card selection'
+                : getTurnStatus() === 'passed'
+                ? 'Waiting for next round'
+                : undefined
+            }
+          />
+
+          {/* Current Turn Info (when waiting) */}
+          {getTurnStatus() === 'waiting' && currentPlayer && (
+            <Card variant="glass" padding="md" className="text-center">
+              <p className="text-sm text-gray-400 mb-1">Current turn</p>
+              <div className="flex items-center justify-center gap-3">
+                <div className={`w-8 h-8 rounded-full ${getPlayerColor(currentPlayer.color as PlayerColorId).bg}`} />
+                <span className="text-lg font-semibold">{currentPlayer.name}</span>
+              </div>
+            </Card>
+          )}
+        </div>
+      )}
+
+      {/* Fixed Bottom Action Bar */}
+      {selectedPlayerId && (
+        <div className="fixed bottom-0 left-0 right-0 bg-gray-800 border-t border-gray-700 p-4 space-y-3">
+          <Button
+            variant="primary"
+            size="xl"
+            fullWidth
+            onClick={handleEndTurn}
+            disabled={!isMyTurn}
+            className={isMyTurn ? 'animate-pulse-ready' : ''}
           >
-            <div className="text-2xl font-bold">
-              {selectedPlayer?.hasPassed
-                ? '✓ You Have Passed'
-                : game.status === 'paused'
-                ? '⏸ Game Paused'
-                : isMyTurn
-                ? "It's Your Turn!"
-                : 'Waiting for your turn...'}
-            </div>
-            {selectedPlayer?.hasPassed && (
-              <div className="mt-2 text-sm">
-                Waiting for next round...
-              </div>
-            )}
-            {!isMyTurn && game.status !== 'paused' && !selectedPlayer?.hasPassed && (
-              <div className="mt-2">
-                Current: {currentPlayer?.name}
-              </div>
-            )}
-            {game.status === 'paused' && !selectedPlayer?.hasPassed && (
-              <div className="mt-2 text-sm">
-                Admin is setting up the round
-              </div>
-            )}
-          </div>
+            End Turn
+          </Button>
 
-          {/* Action Buttons - Fixed at bottom */}
-          <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-6 space-y-3">
-            <button
-              onClick={handleEndTurn}
-              disabled={!isMyTurn}
-              className="w-full px-6 py-4 bg-green-600 text-white rounded-lg font-bold text-xl hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 transform shadow-lg"
-              style={{ minHeight: '60px' }}
-            >
-              End Turn
-            </button>
-
-            <button
-              onClick={handlePass}
-              disabled={!isMyTurn}
-              className="w-full px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-medium text-sm hover:bg-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Pass Turn
-            </button>
-          </div>
+          <Button
+            variant="ghost"
+            size="md"
+            fullWidth
+            onClick={handlePass}
+            disabled={!isMyTurn}
+            className="text-orange-400 border-orange-500/30 hover:bg-orange-500/10"
+          >
+            Pass Turn
+          </Button>
         </div>
       )}
     </div>

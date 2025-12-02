@@ -5,8 +5,9 @@ import { useGamePolling } from '@/components/game/use-game-polling';
 import { getStrategyCardName, getStrategyCardColor } from '@/lib/strategy-cards';
 import { getFactionIcon } from '@/lib/factions';
 import Link from 'next/link';
-import Image from 'next/image';
 import StrategyCardAssignment from '@/components/game/strategy-card-assignment';
+import { Button, Card, Badge } from '@/components/ui';
+import { getPlayerColor, type PlayerColorId } from '@/lib/design-system/tokens/colors';
 
 interface Player {
   id: string;
@@ -31,17 +32,6 @@ interface Game {
   players: Player[];
 }
 
-const COLOR_MAP: Record<string, { bg: string; text: string; border: string }> = {
-  red: { bg: 'bg-red-600', text: 'text-white', border: 'border-red-600' },
-  blue: { bg: 'bg-blue-600', text: 'text-white', border: 'border-blue-600' },
-  green: { bg: 'bg-green-600', text: 'text-white', border: 'border-green-600' },
-  yellow: { bg: 'bg-yellow-500', text: 'text-black', border: 'border-yellow-500' },
-  purple: { bg: 'bg-purple-600', text: 'text-white', border: 'border-purple-600' },
-  black: { bg: 'bg-gray-900', text: 'text-white', border: 'border-gray-900' },
-  orange: { bg: 'bg-orange-600', text: 'text-white', border: 'border-orange-600' },
-  pink: { bg: 'bg-pink-600', text: 'text-white', border: 'border-pink-600' },
-};
-
 function formatTime(ms: number): string {
   const totalSeconds = Math.floor(ms / 1000);
   const hours = Math.floor(totalSeconds / 3600);
@@ -56,8 +46,6 @@ function formatTime(ms: number): string {
 
 function getFactionInitials(faction: string | null): string {
   if (!faction) return '';
-
-  // Get first letter of each word (max 3)
   const words = faction.split(' ').filter(w => w.length > 0);
   return words.slice(0, 3).map(w => w[0].toUpperCase()).join('');
 }
@@ -71,8 +59,6 @@ export default function GamePage({ params }: { params: Promise<{ id: string }> }
 
   useEffect(() => {
     if (!game) return;
-
-    // Find player with current turn order
     const currentPlayer = game.players.find((p: Player) => p.turnOrder === game.currentPlayerTurnOrder);
     const playerIndex = currentPlayer ? game.players.indexOf(currentPlayer) : 0;
     setCurrentPlayerIndex(playerIndex);
@@ -129,7 +115,7 @@ export default function GamePage({ params }: { params: Promise<{ id: string }> }
     }
   };
 
-  // Timer for current turn - uses turnStartedAt from database
+  // Timer for current turn
   useEffect(() => {
     if (!game || game.status === 'paused') {
       setElapsedTime(0);
@@ -146,35 +132,33 @@ export default function GamePage({ params }: { params: Promise<{ id: string }> }
 
   if (!game) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-2xl text-gray-600">Loading...</div>
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+        <div className="text-2xl text-gray-400">Loading...</div>
       </div>
     );
   }
 
   const currentPlayer = game.players[currentPlayerIndex];
-  const colorScheme = COLOR_MAP[currentPlayer?.color] || COLOR_MAP.red;
+  const playerColor = getPlayerColor(currentPlayer?.color as PlayerColorId);
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">
-      {/* Header with admin link */}
-      <div className="bg-gray-800 px-8 py-4 flex justify-between items-center">
+      {/* Header */}
+      <div className="bg-gray-800 border-b border-gray-700 px-8 py-4 flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold">TI4 Tracker</h1>
           <div className="text-sm text-gray-400">Round {game.currentRound}</div>
         </div>
-        <div className="flex gap-4">
-          <Link
-            href={`/game/${id}/admin`}
-            className="px-4 py-2 bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            Admin Panel
+        <div className="flex gap-3">
+          <Link href={`/game/${id}/admin`}>
+            <Button variant="secondary" size="md">
+              Admin Panel
+            </Button>
           </Link>
-          <Link
-            href={`/game/${id}/join`}
-            className="px-4 py-2 bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
-          >
-            Join Game
+          <Link href={`/game/${id}/join`}>
+            <Button variant="primary" size="md">
+              Join Game
+            </Button>
           </Link>
         </div>
       </div>
@@ -193,11 +177,14 @@ export default function GamePage({ params }: { params: Promise<{ id: string }> }
         ) : (
           <>
             <div className="text-4xl font-semibold mb-4 text-gray-400">Current Turn</div>
+
+            {/* Current Player Card */}
             <div
-              className={`${colorScheme.bg} ${colorScheme.text} px-24 py-16 rounded-3xl shadow-2xl border-8 ${colorScheme.border} relative`}
+              className={`${playerColor.bg} px-24 py-16 rounded-3xl shadow-2xl border-8 ${playerColor.border} relative`}
             >
+              {/* Faction Icon */}
               {currentPlayer?.faction && getFactionIcon(currentPlayer.faction) && (
-                <div className="absolute top-8 left-8 w-24 h-24 bg-white bg-opacity-30 rounded-full flex items-center justify-center p-2 overflow-hidden">
+                <div className="absolute top-8 left-8 w-24 h-24 bg-white/20 rounded-full flex items-center justify-center p-2 overflow-hidden backdrop-blur-sm">
                   <img
                     src={getFactionIcon(currentPlayer.faction)!}
                     alt={currentPlayer.faction}
@@ -205,51 +192,67 @@ export default function GamePage({ params }: { params: Promise<{ id: string }> }
                   />
                 </div>
               )}
-              <div className="text-8xl font-bold text-center mb-4">{currentPlayer?.name}</div>
+
+              {/* Speaker Badge */}
+              {currentPlayer?.hasSpeaker && (
+                <div className="absolute top-6 right-6">
+                  <Badge variant="warning" size="lg" icon={<span>👑</span>}>
+                    Speaker
+                  </Badge>
+                </div>
+              )}
+
+              <div className={`text-8xl font-bold text-center mb-4 ${playerColor.text}`}>
+                {currentPlayer?.name}
+              </div>
               {currentPlayer?.faction && (
-                <div className="text-4xl text-center opacity-90">{currentPlayer.faction}</div>
+                <div className={`text-4xl text-center ${playerColor.text} opacity-90`}>
+                  {currentPlayer.faction}
+                </div>
               )}
             </div>
 
             {/* Turn Timer */}
-            <div className="mt-12 text-6xl font-mono font-bold">
+            <div className="mt-12 text-7xl font-mono font-bold tabular-nums">
               {formatTime(elapsedTime)}
             </div>
             <div className="text-2xl text-gray-400 mt-2">Turn Time</div>
 
             {/* Turn Action Buttons */}
             <div className="mt-8 flex gap-4 items-center">
-              <button
-                onClick={endTurn}
-                className="px-8 py-4 bg-blue-600 text-white text-xl rounded-lg hover:bg-blue-700 transition-colors font-medium"
-              >
+              <Button variant="secondary" size="xl" onClick={endTurn}>
                 End Turn
-              </button>
+              </Button>
 
               {/* Pass Button with Confirmation */}
               {!showPassConfirm ? (
-                <button
+                <Button
+                  variant="ghost"
+                  size="md"
                   onClick={() => setShowPassConfirm(true)}
-                  className="px-4 py-2 bg-orange-600 text-white text-sm rounded-lg hover:bg-orange-700 transition-colors font-medium"
+                  className="text-orange-400 border-orange-500/50 hover:bg-orange-500/10"
                 >
                   Pass
-                </button>
+                </Button>
               ) : (
-                <div className="flex gap-2 items-center bg-gray-800 px-4 py-2 rounded-lg">
-                  <span className="text-sm text-gray-300">Pass turn?</span>
-                  <button
+                <Card variant="glass" padding="sm" className="flex gap-3 items-center">
+                  <span className="text-sm text-gray-300 px-2">Pass turn?</span>
+                  <Button
+                    variant="danger"
+                    size="sm"
                     onClick={passTurn}
-                    className="px-3 py-1 bg-orange-600 text-white text-sm rounded hover:bg-orange-700 transition-colors"
+                    className="bg-orange-600 hover:bg-orange-500"
                   >
                     Yes
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     onClick={() => setShowPassConfirm(false)}
-                    className="px-3 py-1 bg-gray-600 text-white text-sm rounded hover:bg-gray-700 transition-colors"
                   >
                     No
-                  </button>
-                </div>
+                  </Button>
+                </Card>
               )}
             </div>
           </>
@@ -260,26 +263,38 @@ export default function GamePage({ params }: { params: Promise<{ id: string }> }
       <div className="px-8 pb-8">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {game.players.map((player: Player, index: number) => {
-            const colors = COLOR_MAP[player.color] || COLOR_MAP.red;
-            const isActive = index === currentPlayerIndex;
+            const colors = getPlayerColor(player.color as PlayerColorId);
+            const isActive = index === currentPlayerIndex && game.status !== 'paused';
 
             return (
-              <div
+              <Card
                 key={player.id}
-                className={`bg-gray-800 rounded-lg p-6 ${
-                  isActive ? `ring-4 ${colors.border}` : ''
-                } ${player.hasPassed ? 'opacity-50' : ''} transition-all relative`}
+                variant="player"
+                playerColor={player.color as PlayerColorId}
+                className={`
+                  ${isActive ? `ring-4 ${colors.border} shadow-lg` : ''}
+                  ${player.hasPassed ? 'opacity-50' : ''}
+                  transition-all duration-300
+                `}
+                padding="lg"
               >
-                {player.hasPassed && (
-                  <div className="absolute top-2 right-2 bg-orange-500 text-white px-3 py-1 rounded-full text-sm font-bold">
-                    PASSED
-                  </div>
-                )}
+                {/* Status Badges */}
+                <div className="absolute top-3 right-3 flex gap-2">
+                  {player.hasPassed && (
+                    <Badge variant="warning" size="sm">
+                      PASSED
+                    </Badge>
+                  )}
+                  {player.hasSpeaker && (
+                    <Badge variant="warning" size="sm" icon={<span>👑</span>}>
+                      Speaker
+                    </Badge>
+                  )}
+                </div>
+
+                {/* Player Info */}
                 <div className="flex items-center gap-4 mb-4">
-                  <div className={`w-16 h-16 rounded-full ${colors.bg} flex items-center justify-center font-bold relative overflow-hidden`}>
-                    {player.hasSpeaker && (
-                      <div className="absolute -top-1 -right-1 text-2xl z-10">🔊</div>
-                    )}
+                  <div className={`w-16 h-16 rounded-full ${colors.bg} flex items-center justify-center font-bold relative overflow-hidden shadow-lg`}>
                     {getFactionIcon(player.faction) ? (
                       <img
                         src={getFactionIcon(player.faction)!}
@@ -287,7 +302,7 @@ export default function GamePage({ params }: { params: Promise<{ id: string }> }
                         className="w-12 h-12 object-contain"
                       />
                     ) : (
-                      <div className="text-white text-lg">
+                      <div className={`${colors.text} text-lg`}>
                         {getFactionInitials(player.faction) || player.name.substring(0, 2).toUpperCase()}
                       </div>
                     )}
@@ -300,23 +315,25 @@ export default function GamePage({ params }: { params: Promise<{ id: string }> }
                   </div>
                 </div>
 
+                {/* Strategy Card */}
                 {player.strategyCard && (
-                  <div className={`mb-3 px-3 py-2 rounded-lg ${getStrategyCardColor(player.strategyCard)} text-white text-center font-bold`}>
+                  <div className={`mb-4 px-4 py-2.5 rounded-xl ${getStrategyCardColor(player.strategyCard)} text-white text-center font-bold shadow-md`}>
                     {player.strategyCard}. {getStrategyCardName(player.strategyCard)}
                   </div>
                 )}
 
-                <div className="space-y-2">
-                  <div className="flex justify-between">
+                {/* Stats */}
+                <div className="space-y-2 pt-2 border-t border-gray-700">
+                  <div className="flex justify-between items-center">
                     <span className="text-gray-400">Score</span>
-                    <span className="text-2xl font-bold">{player.score}</span>
+                    <span className="text-3xl font-bold">{player.score}</span>
                   </div>
-                  <div className="flex justify-between">
+                  <div className="flex justify-between items-center">
                     <span className="text-gray-400">Total Time</span>
-                    <span className="font-mono">{formatTime(player.totalTimeMs)}</span>
+                    <span className="font-mono text-lg">{formatTime(player.totalTimeMs)}</span>
                   </div>
                 </div>
-              </div>
+              </Card>
             );
           })}
         </div>
