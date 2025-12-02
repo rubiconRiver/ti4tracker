@@ -2,8 +2,6 @@
 
 import { useEffect, useState, use } from 'react';
 import { useGamePolling } from '@/components/game/use-game-polling';
-import { Button, Card, Badge } from '@/components/ui';
-import { TurnStatusCard, type TurnStatus } from '@/components/game/turn-status-card';
 import { getPlayerColor, type PlayerColorId } from '@/lib/design-system/tokens/colors';
 import type { Player, Game } from '@/lib/types';
 
@@ -14,11 +12,27 @@ function formatTime(ms: number): string {
   return `${minutes}:${seconds.toString().padStart(2, '0')}`;
 }
 
+// Find the next player who hasn't passed
+function getNextPlayerTurnOrder(game: Game, currentPlayerId: string): number | null {
+  const activePlayers = game.players.filter(p => !p.hasPassed);
+  if (activePlayers.length === 0) return null;
+
+  // Sort by strategy card (turn order within round)
+  const sortedPlayers = [...activePlayers].sort((a, b) =>
+    (a.strategyCard || 99) - (b.strategyCard || 99)
+  );
+
+  const currentIdx = sortedPlayers.findIndex(p => p.id === currentPlayerId);
+  const nextIdx = (currentIdx + 1) % sortedPlayers.length;
+  return sortedPlayers[nextIdx].turnOrder;
+}
+
 export default function JoinGame({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const { data: game } = useGamePolling(id, { interval: 2000 });
+  const { data: game, mutate, isPending } = useGamePolling(id, { interval: 2000 });
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
   const [currentPlayerIndex, setCurrentPlayerIndex] = useState(0);
+  const [actionPending, setActionPending] = useState(false);
 
   // Load saved player selection from localStorage on mount
   useEffect(() => {
@@ -85,13 +99,27 @@ export default function JoinGame({ params }: { params: Promise<{ id: string }> }
   }, [game]);
 
   const handleEndTurn = async () => {
-    if (!selectedPlayerId || !game) return;
+    if (!selectedPlayerId || !game || actionPending) return;
 
     const turnStartTime = new Date(game.turnStartedAt).getTime();
     const turnDurationMs = Date.now() - turnStartTime;
 
+    // Apply optimistic update immediately
+    setActionPending(true);
+    const nextTurnOrder = getNextPlayerTurnOrder(game, selectedPlayerId);
+    if (nextTurnOrder !== null) {
+      mutate((current) => {
+        if (!current) return current;
+        return {
+          ...current,
+          currentPlayerTurnOrder: nextTurnOrder,
+          turnStartedAt: new Date().toISOString(),
+        };
+      });
+    }
+
     try {
-      await fetch('/api/turns', {
+      const res = await fetch('/api/turns', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -101,22 +129,40 @@ export default function JoinGame({ params }: { params: Promise<{ id: string }> }
           turnDurationMs,
         }),
       });
+      if (!res.ok) throw new Error('Failed to end turn');
     } catch (error) {
       console.error('Error ending turn:', error);
-      alert('Failed to end turn');
+      // Error will be corrected by next poll
+    } finally {
+      setActionPending(false);
     }
   };
 
   const handlePass = async () => {
-    if (!selectedPlayerId || !game) return;
+    if (!selectedPlayerId || !game || actionPending) return;
 
     if (!confirm('Are you sure you want to pass your turn?')) return;
 
     const turnStartTime = new Date(game.turnStartedAt).getTime();
     const turnDurationMs = Date.now() - turnStartTime;
 
+    // Apply optimistic update immediately
+    setActionPending(true);
+    const nextTurnOrder = getNextPlayerTurnOrder(game, selectedPlayerId);
+    mutate((current) => {
+      if (!current) return current;
+      return {
+        ...current,
+        currentPlayerTurnOrder: nextTurnOrder ?? current.currentPlayerTurnOrder,
+        turnStartedAt: new Date().toISOString(),
+        players: current.players.map(p =>
+          p.id === selectedPlayerId ? { ...p, hasPassed: true } : p
+        ),
+      };
+    });
+
     try {
-      await fetch('/api/turns', {
+      const res = await fetch('/api/turns', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -126,9 +172,12 @@ export default function JoinGame({ params }: { params: Promise<{ id: string }> }
           turnDurationMs,
         }),
       });
+      if (!res.ok) throw new Error('Failed to pass');
     } catch (error) {
       console.error('Error passing:', error);
-      alert('Failed to pass');
+      // Error will be corrected by next poll
+    } finally {
+      setActionPending(false);
     }
   };
 
@@ -246,19 +295,33 @@ export default function JoinGame({ params }: { params: Promise<{ id: string }> }
           </div>
 
           {/* Action Buttons - Fixed at bottom */}
-          <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-6 space-y-3">
+          <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-6 space-y-3 z-50">
             <button
               onClick={handleEndTurn}
-              disabled={!isMyTurn}
-              className="w-full px-6 py-4 bg-green-600 text-white rounded-lg font-bold text-xl hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 transform shadow-lg"
+              disabled={!isMyTurn || actionPending}
+              className={`w-full px-6 py-4 rounded-lg font-bold text-xl transition-all transform shadow-lg ${
+                actionPending
+                  ? 'bg-blue-500 text-white scale-95'
+                  : 'bg-green-600 text-white hover:bg-green-700 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed'
+              }`}
               style={{ minHeight: '60px' }}
             >
-              End Turn
+              {actionPending ? (
+                <span className="flex items-center justify-center gap-2">
+                  <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  Ending Turn...
+                </span>
+              ) : (
+                'End Turn'
+              )}
             </button>
 
             <button
               onClick={handlePass}
-              disabled={!isMyTurn}
+              disabled={!isMyTurn || actionPending}
               className="w-full px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-medium text-sm hover:bg-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Pass Turn

@@ -31,12 +31,28 @@ function getFactionInitials(faction: string | null): string {
   return words.slice(0, 3).map(w => w[0].toUpperCase()).join('');
 }
 
+// Find the next player who hasn't passed
+function getNextPlayerTurnOrder(game: Game, currentPlayerId: string): number | null {
+  const activePlayers = game.players.filter(p => !p.hasPassed);
+  if (activePlayers.length === 0) return null;
+
+  // Sort by strategy card (turn order within round)
+  const sortedPlayers = [...activePlayers].sort((a, b) =>
+    (a.strategyCard || 99) - (b.strategyCard || 99)
+  );
+
+  const currentIdx = sortedPlayers.findIndex(p => p.id === currentPlayerId);
+  const nextIdx = (currentIdx + 1) % sortedPlayers.length;
+  return sortedPlayers[nextIdx].turnOrder;
+}
+
 export default function GamePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const { data: game } = useGamePolling(id, { interval: 2000 });
+  const { data: game, mutate } = useGamePolling(id, { interval: 2000 });
   const [currentPlayerIndex, setCurrentPlayerIndex] = useState(0);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [showPassConfirm, setShowPassConfirm] = useState(false);
+  const [actionPending, setActionPending] = useState(false);
 
   useEffect(() => {
     if (!game) return;
@@ -48,7 +64,7 @@ export default function GamePage({ params }: { params: Promise<{ id: string }> }
   }, [game]);
 
   const endTurn = async () => {
-    if (!game || game.status === 'paused') return;
+    if (!game || game.status === 'paused' || actionPending) return;
 
     const currentPlayer = game.players.find((p: Player) => p.turnOrder === game.currentPlayerTurnOrder);
     if (!currentPlayer) return;
@@ -56,8 +72,22 @@ export default function GamePage({ params }: { params: Promise<{ id: string }> }
     const turnStartTime = new Date(game.turnStartedAt).getTime();
     const turnDurationMs = Date.now() - turnStartTime;
 
+    // Apply optimistic update immediately
+    setActionPending(true);
+    const nextTurnOrder = getNextPlayerTurnOrder(game, currentPlayer.id);
+    if (nextTurnOrder !== null) {
+      mutate((current) => {
+        if (!current) return current;
+        return {
+          ...current,
+          currentPlayerTurnOrder: nextTurnOrder,
+          turnStartedAt: new Date().toISOString(),
+        };
+      });
+    }
+
     try {
-      await fetch('/api/turns', {
+      const res = await fetch('/api/turns', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -67,13 +97,16 @@ export default function GamePage({ params }: { params: Promise<{ id: string }> }
           turnDurationMs,
         }),
       });
+      if (!res.ok) throw new Error('Failed to end turn');
     } catch (error) {
       console.error('Error ending turn:', error);
+    } finally {
+      setActionPending(false);
     }
   };
 
   const passTurn = async () => {
-    if (!game || game.status === 'paused') return;
+    if (!game || game.status === 'paused' || actionPending) return;
 
     const currentPlayer = game.players.find((p: Player) => p.turnOrder === game.currentPlayerTurnOrder);
     if (!currentPlayer) return;
@@ -81,8 +114,24 @@ export default function GamePage({ params }: { params: Promise<{ id: string }> }
     const turnStartTime = new Date(game.turnStartedAt).getTime();
     const turnDurationMs = Date.now() - turnStartTime;
 
+    // Apply optimistic update immediately
+    setActionPending(true);
+    setShowPassConfirm(false);
+    const nextTurnOrder = getNextPlayerTurnOrder(game, currentPlayer.id);
+    mutate((current) => {
+      if (!current) return current;
+      return {
+        ...current,
+        currentPlayerTurnOrder: nextTurnOrder ?? current.currentPlayerTurnOrder,
+        turnStartedAt: new Date().toISOString(),
+        players: current.players.map(p =>
+          p.id === currentPlayer.id ? { ...p, hasPassed: true } : p
+        ),
+      };
+    });
+
     try {
-      await fetch('/api/turns', {
+      const res = await fetch('/api/turns', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -92,9 +141,11 @@ export default function GamePage({ params }: { params: Promise<{ id: string }> }
           turnDurationMs,
         }),
       });
-      setShowPassConfirm(false);
+      if (!res.ok) throw new Error('Failed to pass');
     } catch (error) {
       console.error('Error passing turn:', error);
+    } finally {
+      setActionPending(false);
     }
   };
 
@@ -190,16 +241,32 @@ export default function GamePage({ params }: { params: Promise<{ id: string }> }
             <div className="mt-8 flex gap-4 items-center">
               <button
                 onClick={endTurn}
-                className="px-8 py-4 bg-blue-600 text-white text-xl rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                disabled={actionPending}
+                className={`px-8 py-4 text-white text-xl rounded-lg transition-all font-medium ${
+                  actionPending
+                    ? 'bg-blue-400 scale-95'
+                    : 'bg-blue-600 hover:bg-blue-700'
+                }`}
               >
-                End Turn
+                {actionPending ? (
+                  <span className="flex items-center gap-2">
+                    <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                    Ending Turn...
+                  </span>
+                ) : (
+                  'End Turn'
+                )}
               </button>
 
               {/* Pass Button with Confirmation */}
               {!showPassConfirm ? (
                 <button
                   onClick={() => setShowPassConfirm(true)}
-                  className="px-4 py-2 bg-orange-600 text-white text-sm rounded-lg hover:bg-orange-700 transition-colors font-medium"
+                  disabled={actionPending}
+                  className="px-4 py-2 bg-orange-600 text-white text-sm rounded-lg hover:bg-orange-700 transition-colors font-medium disabled:opacity-50"
                 >
                   Pass
                 </button>
@@ -208,7 +275,8 @@ export default function GamePage({ params }: { params: Promise<{ id: string }> }
                   <span className="text-sm text-gray-300">Pass turn?</span>
                   <button
                     onClick={passTurn}
-                    className="px-3 py-1 bg-orange-600 text-white text-sm rounded hover:bg-orange-700 transition-colors"
+                    disabled={actionPending}
+                    className="px-3 py-1 bg-orange-600 text-white text-sm rounded hover:bg-orange-700 transition-colors disabled:opacity-50"
                   >
                     Yes
                   </button>
