@@ -283,7 +283,7 @@ export default function JoinGame({ params }: { params: Promise<{ id: string }> }
 
       {/* Fixed Bottom Action Bar */}
       {selectedPlayerId && (
-        <div className="fixed bottom-0 left-0 right-0 bg-gray-800 border-t border-gray-700 p-4 space-y-3">
+        <div className="fixed bottom-0 left-0 right-0 bg-gray-800 border-t border-gray-700 p-4 space-y-3 z-50">
           <Button
             variant="primary"
             size="xl"
