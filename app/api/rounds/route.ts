@@ -6,7 +6,7 @@ import { emitToGame } from '@/lib/socket';
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { gameId, strategyAssignments } = body;
+    const { gameId, strategyAssignments, adminPin } = body;
     // strategyAssignments: [{ playerId: string, cardNumber: number }]
 
     const game = await db.game.findUnique({
@@ -16,6 +16,11 @@ export async function POST(request: Request) {
 
     if (!game) {
       return NextResponse.json({ error: 'Game not found' }, { status: 404 });
+    }
+
+    // Verify admin PIN
+    if (game.adminPin && game.adminPin !== adminPin) {
+      return NextResponse.json({ error: 'Invalid admin PIN' }, { status: 403 });
     }
 
     // Create new round

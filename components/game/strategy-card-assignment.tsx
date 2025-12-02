@@ -17,6 +17,7 @@ interface Props {
   players: Player[];
   currentRound: number;
   onAssigned: () => void;
+  adminPin?: string;
 }
 
 const COLOR_MAP: Record<string, { bg: string; border: string; accent: string }> = {
@@ -30,7 +31,7 @@ const COLOR_MAP: Record<string, { bg: string; border: string; accent: string }> 
   pink: { bg: 'bg-pink-600', border: 'border-pink-500', accent: 'from-pink-500' },
 };
 
-export default function StrategyCardAssignment({ gameId, players, currentRound, onAssigned }: Props) {
+export default function StrategyCardAssignment({ gameId, players, currentRound, onAssigned, adminPin }: Props) {
   const [assignments, setAssignments] = useState<Record<string, number>>({});
   const [submitting, setSubmitting] = useState(false);
   const [selectedPlayer, setSelectedPlayer] = useState<string | null>(null);
@@ -63,7 +64,7 @@ export default function StrategyCardAssignment({ gameId, players, currentRound, 
       await fetch('/api/rounds', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ gameId, strategyAssignments }),
+        body: JSON.stringify({ gameId, strategyAssignments, adminPin }),
       });
 
       onAssigned();

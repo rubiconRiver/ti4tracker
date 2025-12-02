@@ -27,14 +27,40 @@ export async function POST(request: Request) {
   }
 }
 
+// Fields that can be updated via PATCH (whitelist)
+const ALLOWED_PLAYER_UPDATE_FIELDS = ['score', 'hasSpeaker', 'faction'];
+
 export async function PATCH(request: Request) {
   try {
     const body = await request.json();
-    const { id, ...data } = body;
+    const { id, adminPin, ...updateData } = body;
+
+    // Get the player to find the game
+    const existingPlayer = await db.player.findUnique({
+      where: { id },
+      include: { game: { select: { adminPin: true } } },
+    });
+
+    if (!existingPlayer) {
+      return NextResponse.json({ error: 'Player not found' }, { status: 404 });
+    }
+
+    // Verify admin PIN
+    if (existingPlayer.game.adminPin && existingPlayer.game.adminPin !== adminPin) {
+      return NextResponse.json({ error: 'Invalid admin PIN' }, { status: 403 });
+    }
+
+    // Only allow specific fields to be updated (whitelist)
+    const sanitizedData: Record<string, unknown> = {};
+    for (const field of ALLOWED_PLAYER_UPDATE_FIELDS) {
+      if (field in updateData) {
+        sanitizedData[field] = updateData[field];
+      }
+    }
 
     const player = await db.player.update({
       where: { id },
-      data,
+      data: sanitizedData,
     });
 
     const gameId = player.gameId;

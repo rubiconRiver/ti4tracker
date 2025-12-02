@@ -54,6 +54,11 @@ export default function NewGame() {
       });
       const game = await gameRes.json();
 
+      // Store admin PIN in localStorage for this game
+      if (game.adminPin) {
+        localStorage.setItem(`ti4-admin-${game.id}`, game.adminPin);
+      }
+
       // Add players
       for (let i = 0; i < players.length; i++) {
         const player = players[i];
@@ -72,10 +77,11 @@ export default function NewGame() {
       }
 
       // Start the game in paused mode (waiting for strategy cards)
+      // Include admin PIN for authorization
       await fetch(`/api/games/${game.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'paused' }),
+        body: JSON.stringify({ status: 'paused', adminPin: game.adminPin }),
       });
 
       router.push(`/game/${game.id}/admin`);

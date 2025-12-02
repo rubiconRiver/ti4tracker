@@ -24,6 +24,7 @@ model Game {
   currentPlayerTurnOrder Int     @default(1) // Turn order of the current player (1-8, matches strategy card)
   speakerPlayerId       String? // Player who has the speaker token
   turnStartedAt         DateTime @default(now()) // When the current turn started
+  adminPin              String   @default("") // PIN code for admin access
 
   players               Player[]
   history               TurnHistory[]

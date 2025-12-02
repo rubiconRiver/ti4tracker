@@ -7,6 +7,22 @@ export async function POST(
 ) {
   try {
     const { id } = await params;
+    const body = await request.json();
+    const { adminPin } = body;
+
+    // Verify admin PIN
+    const existingGame = await db.game.findUnique({
+      where: { id },
+      select: { adminPin: true },
+    });
+
+    if (!existingGame) {
+      return NextResponse.json({ error: 'Game not found' }, { status: 404 });
+    }
+
+    if (existingGame.adminPin && existingGame.adminPin !== adminPin) {
+      return NextResponse.json({ error: 'Invalid admin PIN' }, { status: 403 });
+    }
 
     // Reset all players to initial state
     await db.player.updateMany({
