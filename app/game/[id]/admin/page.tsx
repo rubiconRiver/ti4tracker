@@ -99,7 +99,7 @@ export default function AdminPanel({ params }: { params: Promise<{ id: string }>
     if (!confirm('Rewind to the previous turn?')) return;
 
     try {
-      const lastTurn = game.history[0];
+      const lastTurn = game.history?.[0];
       if (!lastTurn) return;
 
       const previousPlayer = game.players.find((p: Player) => p.id === lastTurn.playerId);
@@ -384,7 +384,7 @@ export default function AdminPanel({ params }: { params: Promise<{ id: string }>
           <Card variant="elevated" padding="lg">
             <h2 className="text-xl font-bold mb-4">Recent Actions</h2>
             <div className="space-y-2 max-h-64 overflow-y-auto">
-              {game.history.length === 0 ? (
+              {!game.history?.length ? (
                 <p className="text-gray-500 text-sm">No actions yet</p>
               ) : (
                 game.history.slice(0, 10).map((turn: TurnHistory) => (
