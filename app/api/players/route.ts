@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { emitToGame } from '@/lib/socket';
 
 export async function POST(request: Request) {
   try {
@@ -16,9 +15,6 @@ export async function POST(request: Request) {
         turnOrder,
       },
     });
-
-    // Notify all clients in the game
-    emitToGame(gameId, 'player-joined', player);
 
     return NextResponse.json(player);
   } catch (error) {
@@ -62,9 +58,6 @@ export async function PATCH(request: Request) {
       where: { id },
       data: sanitizedData,
     });
-
-    const gameId = player.gameId;
-    emitToGame(gameId, 'player-updated', player);
 
     return NextResponse.json(player);
   } catch (error) {

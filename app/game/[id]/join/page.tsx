@@ -2,37 +2,10 @@
 
 import { useEffect, useState, use } from 'react';
 import { useGamePolling } from '@/components/game/use-game-polling';
-
-interface Player {
-  id: string;
-  name: string;
-  color: string;
-  faction: string | null;
-  turnOrder: number;
-  score: number;
-  totalTimeMs: number;
-  hasPassed: boolean;
-}
-
-interface Game {
-  id: string;
-  status: string;
-  currentTurn: number;
-  currentPlayerTurnOrder: number;
-  turnStartedAt: string;
-  players: Player[];
-}
-
-const COLOR_MAP: Record<string, { bg: string; text: string }> = {
-  red: { bg: 'bg-red-600', text: 'text-white' },
-  blue: { bg: 'bg-blue-600', text: 'text-white' },
-  green: { bg: 'bg-green-600', text: 'text-white' },
-  yellow: { bg: 'bg-yellow-500', text: 'text-black' },
-  purple: { bg: 'bg-purple-600', text: 'text-white' },
-  black: { bg: 'bg-gray-900', text: 'text-white' },
-  orange: { bg: 'bg-orange-600', text: 'text-white' },
-  pink: { bg: 'bg-pink-600', text: 'text-white' },
-};
+import { Button, Card, Badge } from '@/components/ui';
+import { TurnStatusCard, type TurnStatus } from '@/components/game/turn-status-card';
+import { getPlayerColor, type PlayerColorId } from '@/lib/design-system/tokens/colors';
+import type { Player, Game } from '@/lib/types';
 
 function formatTime(ms: number): string {
   const totalSeconds = Math.floor(ms / 1000);
@@ -184,7 +157,7 @@ export default function JoinGame({ params }: { params: Promise<{ id: string }> }
           <h2 className="text-2xl font-bold mb-4 text-black">Select Your Player</h2>
           <div className="space-y-3">
             {game.players.map((player: Player) => {
-              const colors = COLOR_MAP[player.color] || COLOR_MAP.red;
+              const colors = getPlayerColor(player.color as PlayerColorId);
               return (
                 <button
                   key={player.id}

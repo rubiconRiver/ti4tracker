@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { emitToGame } from '@/lib/socket';
 
 export async function POST(request: Request) {
   try {
@@ -79,7 +78,6 @@ export async function POST(request: Request) {
         },
       });
 
-      emitToGame(gameId, 'all-passed', { game: updatedGame });
       return NextResponse.json({ turnHistory, game: updatedGame });
     }
 
@@ -114,14 +112,6 @@ export async function POST(request: Request) {
           orderBy: { turnOrder: 'asc' },
         },
       },
-    });
-
-    // Emit real-time update
-    const nextPlayer = updatedPlayers.find(p => p.turnOrder === nextTurnOrder);
-    emitToGame(gameId, 'turn-ended', {
-      turnHistory,
-      game: updatedGame,
-      nextPlayerId: nextPlayer?.id,
     });
 
     return NextResponse.json({ turnHistory, game: updatedGame });

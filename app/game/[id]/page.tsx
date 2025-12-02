@@ -4,43 +4,12 @@ import { useEffect, useState, use } from 'react';
 import { useGamePolling } from '@/components/game/use-game-polling';
 import { getStrategyCardName, getStrategyCardColor } from '@/lib/strategy-cards';
 import { getFactionIcon } from '@/lib/factions';
+import { getPlayerColor, type PlayerColorId } from '@/lib/design-system/tokens/colors';
 import Link from 'next/link';
 import Image from 'next/image';
 import StrategyCardAssignment from '@/components/game/strategy-card-assignment';
+import type { Player, Game } from '@/lib/types';
 
-interface Player {
-  id: string;
-  name: string;
-  color: string;
-  faction: string | null;
-  turnOrder: number;
-  score: number;
-  totalTimeMs: number;
-  strategyCard: number | null;
-  hasSpeaker: boolean;
-  hasPassed: boolean;
-}
-
-interface Game {
-  id: string;
-  status: string;
-  currentTurn: number;
-  currentRound: number;
-  currentPlayerTurnOrder: number;
-  turnStartedAt: string;
-  players: Player[];
-}
-
-const COLOR_MAP: Record<string, { bg: string; text: string; border: string }> = {
-  red: { bg: 'bg-red-600', text: 'text-white', border: 'border-red-600' },
-  blue: { bg: 'bg-blue-600', text: 'text-white', border: 'border-blue-600' },
-  green: { bg: 'bg-green-600', text: 'text-white', border: 'border-green-600' },
-  yellow: { bg: 'bg-yellow-500', text: 'text-black', border: 'border-yellow-500' },
-  purple: { bg: 'bg-purple-600', text: 'text-white', border: 'border-purple-600' },
-  black: { bg: 'bg-gray-900', text: 'text-white', border: 'border-gray-900' },
-  orange: { bg: 'bg-orange-600', text: 'text-white', border: 'border-orange-600' },
-  pink: { bg: 'bg-pink-600', text: 'text-white', border: 'border-pink-600' },
-};
 
 function formatTime(ms: number): string {
   const totalSeconds = Math.floor(ms / 1000);
@@ -153,7 +122,7 @@ export default function GamePage({ params }: { params: Promise<{ id: string }> }
   }
 
   const currentPlayer = game.players[currentPlayerIndex];
-  const colorScheme = COLOR_MAP[currentPlayer?.color] || COLOR_MAP.red;
+  const colorScheme = getPlayerColor(currentPlayer?.color as PlayerColorId);
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">
@@ -260,7 +229,7 @@ export default function GamePage({ params }: { params: Promise<{ id: string }> }
       <div className="px-8 pb-8">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {game.players.map((player: Player, index: number) => {
-            const colors = COLOR_MAP[player.color] || COLOR_MAP.red;
+            const colors = getPlayerColor(player.color as PlayerColorId);
             const isActive = index === currentPlayerIndex;
 
             return (

@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { emitToGame } from '@/lib/socket';
 
 // Start a new round with strategy card assignments
 export async function POST(request: Request) {
@@ -75,8 +74,6 @@ export async function POST(request: Request) {
         },
       },
     });
-
-    emitToGame(gameId, 'round-started', { game: updatedGame, round });
 
     return NextResponse.json({ game: updatedGame, round });
   } catch (error) {

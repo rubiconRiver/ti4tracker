@@ -2,15 +2,8 @@
 
 import { useState } from 'react';
 import { STRATEGY_CARDS } from '@/lib/strategy-cards';
-
-interface Player {
-  id: string;
-  name: string;
-  color: string;
-  faction?: string | null;
-  strategyCard: number | null;
-  hasSpeaker: boolean;
-}
+import { getPlayerColor, type PlayerColorId } from '@/lib/design-system/tokens/colors';
+import type { Player } from '@/lib/types';
 
 interface Props {
   gameId: string;
@@ -19,17 +12,6 @@ interface Props {
   onAssigned: () => void;
   adminPin?: string;
 }
-
-const COLOR_MAP: Record<string, { bg: string; border: string; accent: string }> = {
-  red: { bg: 'bg-red-600', border: 'border-red-500', accent: 'from-red-500' },
-  blue: { bg: 'bg-blue-600', border: 'border-blue-500', accent: 'from-blue-500' },
-  green: { bg: 'bg-green-600', border: 'border-green-500', accent: 'from-green-500' },
-  yellow: { bg: 'bg-yellow-500', border: 'border-yellow-400', accent: 'from-yellow-400' },
-  purple: { bg: 'bg-purple-600', border: 'border-purple-500', accent: 'from-purple-500' },
-  black: { bg: 'bg-gray-800', border: 'border-gray-600', accent: 'from-gray-600' },
-  orange: { bg: 'bg-orange-600', border: 'border-orange-500', accent: 'from-orange-500' },
-  pink: { bg: 'bg-pink-600', border: 'border-pink-500', accent: 'from-pink-500' },
-};
 
 export default function StrategyCardAssignment({ gameId, players, currentRound, onAssigned, adminPin }: Props) {
   const [assignments, setAssignments] = useState<Record<string, number>>({});
@@ -124,7 +106,7 @@ export default function StrategyCardAssignment({ gameId, players, currentRound, 
         {players.map((player, index) => {
           const assignedCard = assignments[player.id];
           const cardData = assignedCard ? STRATEGY_CARDS.find(c => c.number === assignedCard) : null;
-          const colors = COLOR_MAP[player.color] || COLOR_MAP.purple;
+          const colors = getPlayerColor(player.color as PlayerColorId);
           const isSelected = selectedPlayer === player.id;
 
           return (

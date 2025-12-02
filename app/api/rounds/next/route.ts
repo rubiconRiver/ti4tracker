@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { emitToGame } from '@/lib/socket';
 
 // Advance to the next round
 export async function POST(request: Request) {
@@ -59,8 +58,6 @@ export async function POST(request: Request) {
         hasPassed: false,
       },
     });
-
-    emitToGame(gameId, 'round-ended', { game: updatedGame });
 
     return NextResponse.json({ game: updatedGame });
   } catch (error) {

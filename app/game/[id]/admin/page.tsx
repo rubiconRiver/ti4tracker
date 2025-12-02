@@ -5,40 +5,7 @@ import { useGamePolling } from '@/components/game/use-game-polling';
 import StrategyCardAssignment from '@/components/game/strategy-card-assignment';
 import { Button, Card, Input } from '@/components/ui';
 import QRCode from 'qrcode';
-
-interface Player {
-  id: string;
-  name: string;
-  color: string;
-  faction: string | null;
-  turnOrder: number;
-  score: number;
-  totalTimeMs: number;
-  strategyCard: number | null;
-  hasSpeaker: boolean;
-  hasPassed: boolean;
-}
-
-interface TurnHistory {
-  id: string;
-  playerId: string;
-  playerName: string;
-  playerColor: string;
-  turnNumber: number;
-  action: string;
-  createdAt: string;
-}
-
-interface Game {
-  id: string;
-  status: string;
-  currentTurn: number;
-  currentRound: number;
-  currentPlayerTurnOrder: number;
-  turnStartedAt: string;
-  players: Player[];
-  history: TurnHistory[];
-}
+import type { Player, TurnHistory, Game } from '@/lib/types';
 
 export default function AdminPanel({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
