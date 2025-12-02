@@ -2,22 +2,14 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { TI4_FACTIONS } from '@/lib/factions';
-
-const TI4_COLORS = [
-  { name: 'Red', value: 'red', bg: 'bg-red-600', text: 'text-white' },
-  { name: 'Blue', value: 'blue', bg: 'bg-blue-600', text: 'text-white' },
-  { name: 'Green', value: 'green', bg: 'bg-green-600', text: 'text-white' },
-  { name: 'Yellow', value: 'yellow', bg: 'bg-yellow-500', text: 'text-black' },
-  { name: 'Purple', value: 'purple', bg: 'bg-purple-600', text: 'text-white' },
-  { name: 'Black', value: 'black', bg: 'bg-gray-900', text: 'text-white' },
-  { name: 'Orange', value: 'orange', bg: 'bg-orange-600', text: 'text-white' },
-  { name: 'Pink', value: 'pink', bg: 'bg-pink-600', text: 'text-white' },
-];
+import { Button, Card, Input, Select, ColorPicker } from '@/components/ui';
+import { type PlayerColorId, getPlayerColor, PLAYER_COLOR_LIST } from '@/lib/design-system/tokens/colors';
 
 interface Player {
   name: string;
-  color: string;
+  color: PlayerColorId;
   faction: string;
 }
 
@@ -26,21 +18,30 @@ export default function NewGame() {
   const [players, setPlayers] = useState<Player[]>([
     { name: '', color: 'red', faction: '' },
   ]);
+  const [speakerIndex, setSpeakerIndex] = useState(0);
   const [loading, setLoading] = useState(false);
 
+  const usedColors = new Set(players.map((p) => p.color));
+
   const addPlayer = () => {
-    const usedColors = new Set(players.map((p) => p.color));
-    const availableColor = TI4_COLORS.find((c) => !usedColors.has(c.value))?.value || 'red';
-    setPlayers([...players, { name: '', color: availableColor, faction: '' }]);
+    const availableColor = PLAYER_COLOR_LIST.find((c) => !usedColors.has(c.id))?.id || 'red';
+    setPlayers([...players, { name: '', color: availableColor as PlayerColorId, faction: '' }]);
   };
 
   const removePlayer = (index: number) => {
-    setPlayers(players.filter((_, i) => i !== index));
+    const newPlayers = players.filter((_, i) => i !== index);
+    setPlayers(newPlayers);
+    // Adjust speaker index if needed
+    if (speakerIndex >= newPlayers.length) {
+      setSpeakerIndex(Math.max(0, newPlayers.length - 1));
+    } else if (speakerIndex > index) {
+      setSpeakerIndex(speakerIndex - 1);
+    }
   };
 
   const updatePlayer = (index: number, field: keyof Player, value: string) => {
     const updated = [...players];
-    updated[index][field] = value;
+    updated[index] = { ...updated[index], [field]: value };
     setPlayers(updated);
   };
 
@@ -65,6 +66,7 @@ export default function NewGame() {
             color: player.color,
             faction: player.faction || null,
             turnOrder: i,
+            hasSpeaker: i === speakerIndex,
           }),
         });
       }
@@ -84,95 +86,167 @@ export default function NewGame() {
     }
   };
 
+  const factionOptions = TI4_FACTIONS.map((faction) => ({
+    value: faction,
+    label: faction,
+  }));
+
+  const speakerOptions = players.map((player, index) => ({
+    value: index.toString(),
+    label: player.name || `Player ${index + 1}`,
+  }));
+
   return (
-    <main className="min-h-screen p-8 bg-gray-50">
-      <div className="max-w-2xl mx-auto">
-        <h1 className="text-3xl font-bold mb-8 text-black">Create New Game</h1>
+    <main className="min-h-screen bg-gray-900 text-white">
+      {/* Header */}
+      <div className="bg-gray-800 border-b border-gray-700">
+        <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
+          <div>
+            <Link href="/" className="text-gray-400 hover:text-white text-sm transition-colors">
+              ← Back to Home
+            </Link>
+            <h1 className="text-2xl font-bold mt-1">Create New Game</h1>
+          </div>
+          <div className="text-right">
+            <div className="text-sm text-gray-400">Players</div>
+            <div className="text-2xl font-bold text-primary-500">{players.length}/8</div>
+          </div>
+        </div>
+      </div>
 
+      {/* Content */}
+      <div className="max-w-4xl mx-auto px-6 py-8">
         <div className="space-y-6">
-          {players.map((player, index) => (
-            <div key={index} className="bg-white rounded-lg shadow p-6 space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-medium text-black">Player {index + 1}</h3>
-                {players.length > 1 && (
-                  <button
-                    onClick={() => removePlayer(index)}
-                    className="text-red-600 hover:text-red-700 text-sm"
-                  >
-                    Remove
-                  </button>
-                )}
-              </div>
+          {/* Player Cards */}
+          {players.map((player, index) => {
+            const playerColor = getPlayerColor(player.color);
+            const otherUsedColors = players
+              .filter((_, i) => i !== index)
+              .map((p) => p.color) as PlayerColorId[];
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Name
-                </label>
-                <input
-                  type="text"
-                  value={player.name}
-                  onChange={(e) => updatePlayer(index, 'name', e.target.value)}
-                  placeholder={`Player ${index + 1}`}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-black"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Color
-                </label>
-                <div className="grid grid-cols-4 gap-2">
-                  {TI4_COLORS.map((color) => (
-                    <button
-                      key={color.value}
-                      onClick={() => updatePlayer(index, 'color', color.value)}
-                      className={`px-3 py-2 rounded-lg font-medium transition-all ${color.bg} ${color.text} ${
-                        player.color === color.value
-                          ? 'ring-2 ring-offset-2 ring-gray-900'
-                          : 'opacity-50 hover:opacity-100'
-                      }`}
+            return (
+              <Card
+                key={index}
+                variant="player"
+                playerColor={player.color}
+                padding="lg"
+                className="animate-slide-up"
+                style={{ animationDelay: `${index * 50}ms` }}
+              >
+                {/* Card Header */}
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`w-10 h-10 rounded-full ${playerColor.bg} flex items-center justify-center font-bold text-lg ${playerColor.text}`}
                     >
-                      {color.name}
-                    </button>
-                  ))}
+                      {index + 1}
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-lg">
+                        {player.name || `Player ${index + 1}`}
+                      </h3>
+                      {index === speakerIndex && (
+                        <span className="text-xs text-accent-500 font-medium flex items-center gap-1">
+                          <span>👑</span> Speaker
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {players.length > 1 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removePlayer(index)}
+                      className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                    >
+                      Remove
+                    </Button>
+                  )}
                 </div>
-              </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Faction (optional)
-                </label>
-                <select
-                  value={player.faction}
-                  onChange={(e) => updatePlayer(index, 'faction', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-black bg-white"
-                >
-                  <option value="">Select a faction...</option>
-                  {TI4_FACTIONS.map((faction) => (
-                    <option key={faction} value={faction}>
-                      {faction}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          ))}
+                {/* Form Fields */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <Input
+                    label="Player Name"
+                    value={player.name}
+                    onChange={(e) => updatePlayer(index, 'name', e.target.value)}
+                    placeholder={`Player ${index + 1}`}
+                  />
 
-          <button
+                  <Select
+                    label="Faction (optional)"
+                    value={player.faction}
+                    onChange={(e) => updatePlayer(index, 'faction', e.target.value)}
+                    options={factionOptions}
+                    placeholder="Select a faction..."
+                  />
+                </div>
+
+                {/* Color Picker */}
+                <div className="mt-6">
+                  <ColorPicker
+                    label="Player Color"
+                    value={player.color}
+                    onChange={(color) => updatePlayer(index, 'color', color)}
+                    disabledColors={otherUsedColors}
+                    size="lg"
+                  />
+                </div>
+              </Card>
+            );
+          })}
+
+          {/* Add Player Button */}
+          <Button
+            variant="ghost"
+            size="lg"
+            fullWidth
             onClick={addPlayer}
             disabled={players.length >= 8}
-            className="w-full px-4 py-3 bg-gray-200 text-gray-800 rounded-lg font-medium hover:bg-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            icon={
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+            }
           >
             Add Player
-          </button>
+          </Button>
 
-          <button
+          {/* Game Settings */}
+          <Card variant="glass" padding="lg">
+            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+              <span className="text-accent-500">👑</span>
+              Game Settings
+            </h3>
+
+            <Select
+              label="Starting Speaker"
+              value={speakerIndex.toString()}
+              onChange={(e) => setSpeakerIndex(parseInt(e.target.value, 10))}
+              options={speakerOptions}
+              placeholder="Select speaker..."
+            />
+          </Card>
+
+          {/* Start Game Button */}
+          <Button
+            variant="primary"
+            size="xl"
+            fullWidth
             onClick={createGame}
+            loading={loading}
             disabled={loading || players.length === 0}
-            className="w-full px-6 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className={players.length > 0 ? 'animate-pulse-ready' : ''}
+            icon={
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            }
           >
-            {loading ? 'Creating...' : 'Start Game'}
-          </button>
+            {loading ? 'Creating Game...' : 'Start Game'}
+          </Button>
         </div>
       </div>
     </main>
