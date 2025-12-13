@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { TI4_FACTIONS } from '@/lib/factions';
 import { Button, Card, Input, Select, ColorPicker } from '@/components/ui';
 import { type PlayerColorId, getPlayerColor, PLAYER_COLOR_LIST } from '@/lib/design-system/tokens/colors';
+import { Crown } from 'lucide-react';
 
 interface Player {
   name: string;
@@ -156,7 +157,7 @@ export default function NewGame() {
                       </h3>
                       {index === speakerIndex && (
                         <span className="text-xs text-accent-500 font-medium flex items-center gap-1">
-                          <span>👑</span> Speaker
+                          <Crown className="w-3 h-3" /> Speaker
                         </span>
                       )}
                     </div>
@@ -225,7 +226,7 @@ export default function NewGame() {
           {/* Game Settings */}
           <Card variant="glass" padding="lg">
             <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <span className="text-accent-500">👑</span>
+              <Crown className="w-5 h-5 text-accent-500" />
               Game Settings
             </h3>
 

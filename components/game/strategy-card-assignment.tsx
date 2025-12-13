@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { STRATEGY_CARDS } from '@/lib/strategy-cards';
 import { getPlayerColor, type PlayerColorId } from '@/lib/design-system/tokens/colors';
+import { Crown, Rocket, X } from 'lucide-react';
 import type { Player } from '@/lib/types';
 
 interface Props {
@@ -91,7 +92,7 @@ export default function StrategyCardAssignment({ gameId, players, currentRound, 
       {speakerPlayer && (
         <div className="mb-6 p-4 rounded-xl bg-gradient-to-r from-yellow-500/20 to-amber-500/10 border border-yellow-500/30 animate-speaker-glow">
           <div className="flex items-center gap-3">
-            <span className="text-2xl">👑</span>
+            <Crown className="w-7 h-7 text-yellow-400" />
             <div>
               <div className="text-yellow-400 text-sm font-medium">Speaker</div>
               <div className="text-white font-bold text-lg">{speakerPlayer.name}</div>
@@ -130,7 +131,7 @@ export default function StrategyCardAssignment({ gameId, players, currentRound, 
                     <div>
                       <div className="font-bold text-white text-xl flex items-center gap-2">
                         {player.name}
-                        {player.hasSpeaker && <span className="text-yellow-400 text-sm">👑</span>}
+                        {player.hasSpeaker && <Crown className="w-4 h-4 text-yellow-400" />}
                       </div>
                       {player.faction && (
                         <div className="text-sm text-gray-400">{player.faction}</div>
@@ -155,7 +156,7 @@ export default function StrategyCardAssignment({ gameId, players, currentRound, 
                     onClick={() => setSelectedPlayer(isSelected ? null : player.id)}
                   >
                     <div className="flex items-center gap-4">
-                      <span className="text-3xl">{cardData.icon}</span>
+                      <cardData.Icon className="w-8 h-8 text-white" />
                       <div>
                         <div className="text-white/70 text-sm">Strategy Card</div>
                         <div className="text-white font-bold text-xl">
@@ -200,13 +201,13 @@ export default function StrategyCardAssignment({ gameId, players, currentRound, 
                           }`}
                         >
                           <div className="text-center">
-                            <div className="text-xl mb-1">{card.icon}</div>
+                            <card.Icon className="w-5 h-5 text-white mx-auto mb-1" />
                             <div className="text-white font-bold text-lg">{card.number}</div>
                             <div className="text-white/80 text-xs truncate">{card.name}</div>
                           </div>
                           {isAssignedToOther && (
                             <div className="absolute inset-0 flex items-center justify-center">
-                              <span className="text-white/50 text-xl">✗</span>
+                              <X className="w-6 h-6 text-white/50" />
                             </div>
                           )}
                         </button>
@@ -240,7 +241,8 @@ export default function StrategyCardAssignment({ gameId, players, currentRound, 
           </span>
         ) : allAssigned ? (
           <span className="flex items-center justify-center gap-2">
-            🚀 Start Round {currentRound}
+            <Rocket className="w-5 h-5" />
+            Start Round {currentRound}
           </span>
         ) : (
           <span>Assign all cards to continue ({assignedCount}/{players.length})</span>

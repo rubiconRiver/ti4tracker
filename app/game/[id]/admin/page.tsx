@@ -4,6 +4,7 @@ import { useEffect, useState, use } from 'react';
 import { useGamePolling } from '@/components/game/use-game-polling';
 import StrategyCardAssignment from '@/components/game/strategy-card-assignment';
 import { Button, Card, Input } from '@/components/ui';
+import { Pause, Play } from 'lucide-react';
 import QRCode from 'qrcode';
 import type { Player, TurnHistory, Game } from '@/lib/types';
 
@@ -313,9 +314,9 @@ export default function AdminPanel({ params }: { params: Promise<{ id: string }>
           <Card variant="elevated" padding="lg">
             <h2 className="text-xl font-bold mb-4">Game Controls</h2>
             <div className="space-y-3">
-              <div className="text-lg text-gray-300">
-                Status: <span className={`font-bold ${game.status === 'paused' ? 'text-orange-400' : 'text-green-400'}`}>
-                  {game.status === 'paused' ? '⏸ PAUSED' : '▶ ACTIVE'}
+              <div className="text-lg text-gray-300 flex items-center gap-2">
+                Status: <span className={`font-bold ${game.status === 'paused' ? 'text-orange-400' : 'text-green-400'} flex items-center gap-1`}>
+                  {game.status === 'paused' ? <><Pause className="w-4 h-4" /> PAUSED</> : <><Play className="w-4 h-4" /> ACTIVE</>}
                 </span>
               </div>
               <div className="text-lg text-gray-300">
@@ -329,8 +330,9 @@ export default function AdminPanel({ params }: { params: Promise<{ id: string }>
                 variant={game.status === 'paused' ? 'primary' : 'secondary'}
                 size="lg"
                 fullWidth
+                icon={game.status === 'paused' ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
               >
-                {game.status === 'paused' ? '▶ Resume Game' : '⏸ Pause Game'}
+                {game.status === 'paused' ? 'Resume Game' : 'Pause Game'}
               </Button>
               <Button
                 onClick={passTurn}

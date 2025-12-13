@@ -3,6 +3,7 @@
 import { useEffect, useState, use } from 'react';
 import { useGamePolling } from '@/components/game/use-game-polling';
 import { getPlayerColor, type PlayerColorId } from '@/lib/design-system/tokens/colors';
+import { Check, Pause } from 'lucide-react';
 import type { Player, Game } from '@/lib/types';
 
 function formatTime(ms: number): string {
@@ -268,11 +269,11 @@ export default function JoinGame({ params }: { params: Promise<{ id: string }> }
                 : 'bg-gray-200 text-gray-600'
             }`}
           >
-            <div className="text-2xl font-bold">
+            <div className="text-2xl font-bold flex items-center justify-center gap-2">
               {selectedPlayer?.hasPassed
-                ? '✓ You Have Passed'
+                ? <><Check className="w-6 h-6" /> You Have Passed</>
                 : game.status === 'paused'
-                ? '⏸ Game Paused'
+                ? <><Pause className="w-6 h-6" /> Game Paused</>
                 : isMyTurn
                 ? "It's Your Turn!"
                 : 'Waiting for your turn...'}

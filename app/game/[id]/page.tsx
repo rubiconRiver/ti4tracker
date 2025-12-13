@@ -5,6 +5,7 @@ import { useGamePolling } from '@/components/game/use-game-polling';
 import { getStrategyCardName, getStrategyCardColor } from '@/lib/strategy-cards';
 import { getFactionIcon } from '@/lib/factions';
 import { getPlayerColor, type PlayerColorId } from '@/lib/design-system/tokens/colors';
+import { Volume2 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import StrategyCardAssignment from '@/components/game/strategy-card-assignment';
@@ -315,7 +316,9 @@ export default function GamePage({ params }: { params: Promise<{ id: string }> }
                 <div className="flex items-center gap-4 mb-4">
                   <div className={`w-16 h-16 rounded-full ${colors.bg} flex items-center justify-center font-bold relative overflow-hidden`}>
                     {player.hasSpeaker && (
-                      <div className="absolute -top-1 -right-1 text-2xl z-10">🔊</div>
+                      <div className="absolute -top-1 -right-1 z-10 bg-yellow-500 rounded-full p-1">
+                        <Volume2 className="w-4 h-4 text-white" />
+                      </div>
                     )}
                     {getFactionIcon(player.faction) ? (
                       <img
