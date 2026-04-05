@@ -24,6 +24,8 @@ model Game {
   currentPlayerTurnOrder Int     @default(1) // Turn order of the current player (1-8, matches strategy card)
   speakerPlayerId       String? // Player who has the speaker token
   turnStartedAt         DateTime @default(now()) // When the current turn started
+  secondaryCardNumber   Int?     // Which strategy card's secondary is being resolved (null = not in secondary)
+  secondaryPlayerId     String?  // Player who initiated the secondary
 
   players               Player[]
   history               TurnHistory[]
@@ -48,6 +50,7 @@ model Player {
   isActive        Boolean  @default(true)
   hasSpeaker      Boolean  @default(false) // Does this player have the speaker token?
   hasPassed       Boolean  @default(false) // Has this player passed this round?
+  hasUsedStrategyCard Boolean @default(false) // Has this player used their strategy card this round?
 
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
@@ -73,7 +76,8 @@ model TurnHistory {
   turnEndedAt   DateTime?
   turnDurationMs Int?    // Duration of this turn in milliseconds
 
-  action        String   // "pass" or "end_turn" or "rewind"
+  action        String   // "end_turn", "pass", "score_change", "use_strategy_card", "start_secondary", "end_secondary", "undo"
+  previousState Json?    // Snapshot of changed fields before this action, for undo
 
   createdAt     DateTime @default(now())
 

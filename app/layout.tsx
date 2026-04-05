@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import VoiceAssistantWrapper from "@/components/voice-assistant-wrapper";
 
 export const metadata: Metadata = {
   title: "TI4 Tracker",
@@ -15,6 +16,7 @@ export default function RootLayout({
     <html lang="en">
       <body className="antialiased">
         {children}
+        <VoiceAssistantWrapper />
       </body>
     </html>
   );

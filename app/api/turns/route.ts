@@ -1,23 +1,17 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { emitToGame } from '@/lib/socket';
+import { findNextActivePlayer } from '@/lib/game-logic';
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { gameId, playerId, action, turnDurationMs } = body;
+    const { gameId, playerId, action, turnDurationMs, scoreChange } = body;
 
-    // Get the current game state
     const game = await db.game.findUnique({
       where: { id: gameId },
       include: {
-        players: {
-          orderBy: { turnOrder: 'asc' },
-        },
-        history: {
-          orderBy: { createdAt: 'desc' },
-          take: 1,
-        },
+        players: { orderBy: { turnOrder: 'asc' } },
       },
     });
 
@@ -25,108 +19,288 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Game not found' }, { status: 404 });
     }
 
-    const player = game.players.find((p) => p.id === playerId);
-    if (!player) {
-      return NextResponse.json({ error: 'Player not found' }, { status: 404 });
-    }
+    const player = playerId ? game.players.find((p) => p.id === playerId) : null;
 
     const now = new Date();
-    const lastTurn = game.history[0];
-    const turnStartedAt = lastTurn?.turnEndedAt || game.createdAt;
-    const actualDurationMs = turnDurationMs || (now.getTime() - new Date(turnStartedAt).getTime());
+    const turnStartTime = new Date(game.turnStartedAt).getTime();
+    const actualDurationMs = turnDurationMs || (now.getTime() - turnStartTime);
 
-    // Create turn history entry
-    const turnHistory = await db.turnHistory.create({
-      data: {
-        gameId,
-        playerId,
-        playerName: player.name,
-        playerColor: player.color,
-        roundNumber: game.currentRound,
-        turnNumber: game.currentTurn,
-        turnStartedAt: new Date(turnStartedAt),
-        turnEndedAt: now,
-        turnDurationMs: actualDurationMs,
-        action,
-      },
-    });
+    switch (action) {
+      case 'end_turn': {
+        if (!player) return NextResponse.json({ error: 'Player not found' }, { status: 404 });
 
-    // Update player's total time and pass status
-    await db.player.update({
-      where: { id: playerId },
-      data: {
-        totalTimeMs: player.totalTimeMs + actualDurationMs,
-        hasPassed: action === 'pass',
-      },
-    });
+        const previousState = {
+          gameCurrentTurn: game.currentTurn,
+          gameCurrentPlayerTurnOrder: game.currentPlayerTurnOrder,
+          gameTurnStartedAt: game.turnStartedAt.toISOString(),
+          gameStatus: game.status,
+          playerTotalTimeMs: player.totalTimeMs,
+        };
 
-    // Get fresh player data after updating hasPassed
-    const updatedPlayers = await db.player.findMany({
-      where: { gameId },
-      orderBy: { turnOrder: 'asc' },
-    });
-    const allPassed = updatedPlayers.every((p) => p.hasPassed);
-
-    // If everyone passed, pause the game
-    if (allPassed) {
-      const updatedGame = await db.game.update({
-        where: { id: gameId },
-        data: { status: 'paused' },
-        include: {
-          players: {
-            orderBy: { turnOrder: 'asc' },
+        await db.turnHistory.create({
+          data: {
+            gameId,
+            playerId: player.id,
+            playerName: player.name,
+            playerColor: player.color,
+            roundNumber: game.currentRound,
+            turnNumber: game.currentTurn,
+            turnStartedAt: game.turnStartedAt,
+            turnEndedAt: now,
+            turnDurationMs: actualDurationMs,
+            action: 'end_turn',
+            previousState,
           },
-        },
-      });
+        });
 
-      emitToGame(gameId, 'all-passed', { game: updatedGame });
-      return NextResponse.json({ turnHistory, game: updatedGame });
-    }
+        await db.player.update({
+          where: { id: player.id },
+          data: { totalTimeMs: player.totalTimeMs + actualDurationMs },
+        });
 
-    // Find next player who hasn't passed (using fresh data)
-    let nextTurnOrder = player.turnOrder + 1;
-    let attempts = 0;
-    while (attempts < updatedPlayers.length) {
-      // Wrap around: turn order is 1-8, so after 8 comes 1
-      if (nextTurnOrder > 8) {
-        nextTurnOrder = 1;
-      }
-
-      const nextPlayer = updatedPlayers.find(p => p.turnOrder === nextTurnOrder);
-      if (nextPlayer && !nextPlayer.hasPassed) {
-        break;
-      }
-
-      nextTurnOrder++;
-      attempts++;
-    }
-
-    // Update game to next turn and record when it started
-    const updatedGame = await db.game.update({
-      where: { id: gameId },
-      data: {
-        currentTurn: game.currentTurn + 1,
-        currentPlayerTurnOrder: nextTurnOrder,
-        turnStartedAt: now,
-      },
-      include: {
-        players: {
+        const updatedPlayers = await db.player.findMany({
+          where: { gameId },
           orderBy: { turnOrder: 'asc' },
-        },
-      },
-    });
+        });
 
-    // Emit real-time update
-    const nextPlayer = updatedPlayers.find(p => p.turnOrder === nextTurnOrder);
-    emitToGame(gameId, 'turn-ended', {
-      turnHistory,
-      game: updatedGame,
-      nextPlayerId: nextPlayer?.id,
-    });
+        const nextPlayer = findNextActivePlayer(updatedPlayers, player.turnOrder);
 
-    return NextResponse.json({ turnHistory, game: updatedGame });
+        const updatedGame = await db.game.update({
+          where: { id: gameId },
+          data: {
+            currentTurn: game.currentTurn + 1,
+            currentPlayerTurnOrder: nextPlayer?.turnOrder ?? game.currentPlayerTurnOrder,
+            turnStartedAt: now,
+          },
+          include: { players: { orderBy: { turnOrder: 'asc' } } },
+        });
+
+        emitToGame(gameId, 'turn-ended', { game: updatedGame });
+        return NextResponse.json({ game: updatedGame });
+      }
+
+      case 'pass': {
+        if (!player) return NextResponse.json({ error: 'Player not found' }, { status: 404 });
+
+        const previousState = {
+          gameCurrentTurn: game.currentTurn,
+          gameCurrentPlayerTurnOrder: game.currentPlayerTurnOrder,
+          gameTurnStartedAt: game.turnStartedAt.toISOString(),
+          gameStatus: game.status,
+          playerTotalTimeMs: player.totalTimeMs,
+          playerHasPassed: player.hasPassed,
+        };
+
+        await db.turnHistory.create({
+          data: {
+            gameId,
+            playerId: player.id,
+            playerName: player.name,
+            playerColor: player.color,
+            roundNumber: game.currentRound,
+            turnNumber: game.currentTurn,
+            turnStartedAt: game.turnStartedAt,
+            turnEndedAt: now,
+            turnDurationMs: actualDurationMs,
+            action: 'pass',
+            previousState,
+          },
+        });
+
+        await db.player.update({
+          where: { id: player.id },
+          data: {
+            totalTimeMs: player.totalTimeMs + actualDurationMs,
+            hasPassed: true,
+          },
+        });
+
+        const updatedPlayers = await db.player.findMany({
+          where: { gameId },
+          orderBy: { turnOrder: 'asc' },
+        });
+
+        const allPassed = updatedPlayers.every((p) => p.hasPassed);
+
+        if (allPassed) {
+          const updatedGame = await db.game.update({
+            where: { id: gameId },
+            data: { status: 'paused' },
+            include: { players: { orderBy: { turnOrder: 'asc' } } },
+          });
+          emitToGame(gameId, 'all-passed', { game: updatedGame });
+          return NextResponse.json({ game: updatedGame });
+        }
+
+        const nextPlayer = findNextActivePlayer(updatedPlayers, player.turnOrder);
+
+        const updatedGame = await db.game.update({
+          where: { id: gameId },
+          data: {
+            currentTurn: game.currentTurn + 1,
+            currentPlayerTurnOrder: nextPlayer?.turnOrder ?? game.currentPlayerTurnOrder,
+            turnStartedAt: now,
+          },
+          include: { players: { orderBy: { turnOrder: 'asc' } } },
+        });
+
+        emitToGame(gameId, 'turn-ended', { game: updatedGame });
+        return NextResponse.json({ game: updatedGame });
+      }
+
+      case 'score_change': {
+        if (!player) return NextResponse.json({ error: 'Player not found' }, { status: 404 });
+        if (typeof scoreChange !== 'number') {
+          return NextResponse.json({ error: 'scoreChange required' }, { status: 400 });
+        }
+
+        const previousState = {
+          playerScore: player.score,
+        };
+
+        await db.turnHistory.create({
+          data: {
+            gameId,
+            playerId: player.id,
+            playerName: player.name,
+            playerColor: player.color,
+            roundNumber: game.currentRound,
+            turnNumber: game.currentTurn,
+            turnStartedAt: game.turnStartedAt,
+            action: 'score_change',
+            previousState,
+          },
+        });
+
+        await db.player.update({
+          where: { id: player.id },
+          data: { score: player.score + scoreChange },
+        });
+
+        const updatedGame = await db.game.findUnique({
+          where: { id: gameId },
+          include: { players: { orderBy: { turnOrder: 'asc' } } },
+        });
+
+        emitToGame(gameId, 'action-performed', { action: 'score_change', game: updatedGame });
+        return NextResponse.json({ game: updatedGame });
+      }
+
+      case 'use_strategy_card': {
+        if (!player) return NextResponse.json({ error: 'Player not found' }, { status: 404 });
+
+        const previousState = {
+          playerHasUsedStrategyCard: player.hasUsedStrategyCard,
+        };
+
+        await db.turnHistory.create({
+          data: {
+            gameId,
+            playerId: player.id,
+            playerName: player.name,
+            playerColor: player.color,
+            roundNumber: game.currentRound,
+            turnNumber: game.currentTurn,
+            turnStartedAt: game.turnStartedAt,
+            action: 'use_strategy_card',
+            previousState,
+          },
+        });
+
+        await db.player.update({
+          where: { id: player.id },
+          data: { hasUsedStrategyCard: true },
+        });
+
+        const updatedGame = await db.game.findUnique({
+          where: { id: gameId },
+          include: { players: { orderBy: { turnOrder: 'asc' } } },
+        });
+
+        emitToGame(gameId, 'action-performed', { action: 'use_strategy_card', game: updatedGame });
+        return NextResponse.json({ game: updatedGame });
+      }
+
+      case 'start_secondary': {
+        if (!player) return NextResponse.json({ error: 'Player not found' }, { status: 404 });
+
+        const previousState = {
+          gameStatus: game.status,
+          gameSecondaryCardNumber: game.secondaryCardNumber,
+          gameSecondaryPlayerId: game.secondaryPlayerId,
+        };
+
+        await db.turnHistory.create({
+          data: {
+            gameId,
+            playerId: player.id,
+            playerName: player.name,
+            playerColor: player.color,
+            roundNumber: game.currentRound,
+            turnNumber: game.currentTurn,
+            turnStartedAt: game.turnStartedAt,
+            action: 'start_secondary',
+            previousState,
+          },
+        });
+
+        const updatedGame = await db.game.update({
+          where: { id: gameId },
+          data: {
+            status: 'secondary_resolution',
+            secondaryCardNumber: player.strategyCard,
+            secondaryPlayerId: player.id,
+          },
+          include: { players: { orderBy: { turnOrder: 'asc' } } },
+        });
+
+        emitToGame(gameId, 'secondary-started', { game: updatedGame });
+        return NextResponse.json({ game: updatedGame });
+      }
+
+      case 'end_secondary': {
+        const previousState = {
+          gameStatus: game.status,
+          gameSecondaryCardNumber: game.secondaryCardNumber,
+          gameSecondaryPlayerId: game.secondaryPlayerId,
+        };
+
+        // Use the secondary initiator as the player for the history entry
+        const secondaryPlayer = game.players.find(p => p.id === game.secondaryPlayerId);
+
+        await db.turnHistory.create({
+          data: {
+            gameId,
+            playerId: secondaryPlayer?.id ?? playerId ?? game.players[0].id,
+            playerName: secondaryPlayer?.name ?? 'Unknown',
+            playerColor: secondaryPlayer?.color ?? 'gray',
+            roundNumber: game.currentRound,
+            turnNumber: game.currentTurn,
+            turnStartedAt: game.turnStartedAt,
+            action: 'end_secondary',
+            previousState,
+          },
+        });
+
+        const updatedGame = await db.game.update({
+          where: { id: gameId },
+          data: {
+            status: 'active',
+            secondaryCardNumber: null,
+            secondaryPlayerId: null,
+          },
+          include: { players: { orderBy: { turnOrder: 'asc' } } },
+        });
+
+        emitToGame(gameId, 'secondary-ended', { game: updatedGame });
+        return NextResponse.json({ game: updatedGame });
+      }
+
+      default:
+        return NextResponse.json({ error: `Unknown action: ${action}` }, { status: 400 });
+    }
   } catch (error) {
-    console.error('Error ending turn:', error);
-    return NextResponse.json({ error: 'Failed to end turn' }, { status: 500 });
+    console.error('Error processing action:', error);
+    return NextResponse.json({ error: 'Failed to process action' }, { status: 500 });
   }
 }

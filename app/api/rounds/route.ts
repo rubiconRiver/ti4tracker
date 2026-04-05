@@ -46,6 +46,7 @@ export async function POST(request: Request) {
           strategyCard: assignment.cardNumber,
           turnOrder: assignment.cardNumber, // Card 1 = turnOrder 1, Card 2 = turnOrder 2, etc.
           hasPassed: false, // Reset pass status for new round
+          hasUsedStrategyCard: false, // Reset strategy card usage for new round
         },
       });
     }

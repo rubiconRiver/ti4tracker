@@ -17,6 +17,7 @@ export async function POST(
         strategyCard: null,
         hasSpeaker: false,
         hasPassed: false,
+        hasUsedStrategyCard: false,
       },
     });
 
@@ -39,6 +40,8 @@ export async function POST(
         currentPlayerTurnOrder: 1,
         turnStartedAt: new Date(),
         speakerPlayerId: null,
+        secondaryCardNumber: null,
+        secondaryPlayerId: null,
         status: 'paused',
       },
       include: {

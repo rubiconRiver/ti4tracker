@@ -52,6 +52,7 @@ export async function POST(request: Request) {
       data: {
         strategyCard: null,
         hasPassed: false,
+        hasUsedStrategyCard: false,
       },
     });
 

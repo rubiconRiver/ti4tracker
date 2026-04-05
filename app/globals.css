@@ -26,59 +26,52 @@ body {
   }
 }
 
-/* Strategy Card Selection Animations */
-@keyframes card-glow-pulse {
-  0%, 100% {
-    box-shadow: 0 0 15px currentColor, 0 0 30px currentColor;
-  }
-  50% {
-    box-shadow: 0 0 25px currentColor, 0 0 50px currentColor;
-  }
+/* Strategy card flip animation */
+@keyframes card-flip {
+  0% { transform: perspective(600px) rotateY(0deg); }
+  50% { transform: perspective(600px) rotateY(90deg); opacity: 0.5; }
+  100% { transform: perspective(600px) rotateY(0deg); opacity: 1; }
 }
 
-@keyframes speaker-glow {
-  0%, 100% {
-    box-shadow: 0 0 15px rgba(234, 179, 8, 0.4), 0 0 30px rgba(234, 179, 8, 0.2);
-  }
-  50% {
-    box-shadow: 0 0 25px rgba(234, 179, 8, 0.6), 0 0 50px rgba(234, 179, 8, 0.3);
-  }
+@keyframes card-glow {
+  0%, 100% { box-shadow: 0 0 20px rgba(255, 255, 255, 0.1); }
+  50% { box-shadow: 0 0 60px rgba(255, 200, 0, 0.8), 0 0 120px rgba(255, 150, 0, 0.4); }
 }
 
-@keyframes slide-up {
-  from {
-    transform: translateY(20px);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
+@keyframes screen-flash {
+  0%, 100% { opacity: 1; }
+  15% { opacity: 0.3; }
+  30% { opacity: 1; }
+  45% { opacity: 0.4; }
+  60% { opacity: 1; }
 }
 
-@keyframes pulse-ready {
-  0%, 100% {
-    transform: scale(1);
-    box-shadow: 0 0 20px rgba(34, 197, 94, 0.5);
-  }
-  50% {
-    transform: scale(1.02);
-    box-shadow: 0 0 40px rgba(34, 197, 94, 0.7);
-  }
+@keyframes slide-in-up {
+  0% { transform: translateY(100%); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes pulse-border {
+  0%, 100% { border-color: rgba(255, 200, 0, 0.3); }
+  50% { border-color: rgba(255, 200, 0, 1); }
+}
+
+.animate-card-flip {
+  animation: card-flip 0.8s ease-in-out;
 }
 
 .animate-card-glow {
-  animation: card-glow-pulse 2s ease-in-out infinite;
+  animation: card-glow 1.5s ease-in-out 3;
 }
 
-.animate-speaker-glow {
-  animation: speaker-glow 2s ease-in-out infinite;
+.animate-screen-flash {
+  animation: screen-flash 1s ease-in-out;
 }
 
-.animate-slide-up {
-  animation: slide-up 0.4s ease-out forwards;
+.animate-slide-in-up {
+  animation: slide-in-up 0.3s ease-out;
 }
 
-.animate-pulse-ready {
-  animation: pulse-ready 1.5s ease-in-out infinite;
+.animate-pulse-border {
+  animation: pulse-border 1s ease-in-out infinite;
 }
