@@ -51,12 +51,17 @@ export async function POST(request: Request) {
       });
     }
 
+    // Find the lowest strategy card number assigned (first player in turn order)
+    const lowestCard = strategyAssignments
+      .map((a: { cardNumber: number }) => a.cardNumber)
+      .sort((a: number, b: number) => a - b)[0] ?? 1;
+
     // Reset currentTurn to 0, set first player, and unpause game when starting a new round with new turn order
     await db.game.update({
       where: { id: gameId },
       data: {
         currentTurn: 0,
-        currentPlayerTurnOrder: 1, // Start with turn order 1 (strategy card 1)
+        currentPlayerTurnOrder: lowestCard,
         turnStartedAt: new Date(),
         status: 'active', // Unpause game when round starts
       },
